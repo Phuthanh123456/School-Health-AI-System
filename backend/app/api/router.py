@@ -1,8 +1,10 @@
 """Top-level API router."""
 
 from fastapi import APIRouter
+from app.api.insights import router as insights_router
 
 api_router = APIRouter()
+api_router.include_router(insights_router)
 
 
 @api_router.get("/", tags=["system"], summary="API welcome")

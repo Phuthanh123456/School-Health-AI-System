@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react'
+import AdminDashboard from './AdminDashboard'
+
 const features = [
   {
     number: '01',
@@ -34,6 +37,13 @@ function ArrowIcon() {
 }
 
 function App() {
+  const [hash, setHash] = useState(window.location.hash)
+  useEffect(() => {
+    const onHash = () => setHash(window.location.hash)
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+  if (hash === '#admin') return <AdminDashboard />
   return (
     <main className="min-h-screen overflow-hidden bg-background text-foreground">
       <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-6 sm:px-10">
@@ -154,7 +164,7 @@ function App() {
         </section>
 
         <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-border py-5 text-xs text-subtle">
-          <span>SchoolHealth · Sức khỏe học đường được chăm sóc liên tục</span>
+          <a href="#admin">Admin dashboard · Demo</a>
           <span>Dữ liệu demo chỉ nên dùng thông tin giả lập.</span>
         </footer>
       </div>

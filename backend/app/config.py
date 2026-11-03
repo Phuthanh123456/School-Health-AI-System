@@ -19,6 +19,10 @@ class Settings:
 
     def __init__(self) -> None:
         self.database_url: str | None = os.getenv("DATABASE_URL") or None
+        self.insights_admin_token = os.getenv("INSIGHTS_ADMIN_TOKEN", "")
+        self.llm_base_url = os.getenv("LLM_BASE_URL", "")
+        self.llm_model = os.getenv("LLM_MODEL", "")
+        self.llm_api_key = os.getenv("LLM_API_KEY", "")
         self.cors_origins: list[str] = _parse_origins(os.getenv("CORS_ORIGINS"))
 
 

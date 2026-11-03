@@ -95,6 +95,10 @@ Expect the service to report `healthy` and the query to return `1`. The database
 
 ## Testing and CI
 
+### AI insights preview (US-6.1)
+
+The Admin preview at `/#admin` can request Ollama-backed insights from synthetic aggregate counts. See [US-6.1 setup, API contract, safeguards and integration limitations](docs/US-6.1.md). Configure the provider key only in the backend. Authenticated Admin sessions and real dashboard statistics still need to be connected before release.
+
 The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on pushes, pull requests, and manual dispatch. It is prepared to:
 
 - Install backend dependencies from `backend/requirements.txt` and run pytest tests in `backend/tests/`.
