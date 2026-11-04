@@ -6,7 +6,7 @@
 2. Configure `LLM_BASE_URL=https://ollama.com/v1`, `LLM_MODEL=gpt-oss:20b`, and `LLM_API_KEY` on the server. Never use a `VITE_*` variable for keys. Ollama Cloud uses the OpenAI-compatible chat endpoint: https://docs.ollama.com/api/openai-compatibility.
 3. Set `INSIGHTS_ADMIN_TOKEN` to an independently generated random secret, e.g. `python -c "import secrets; print(secrets.token_urlsafe(32))"`. It is a temporary admin access credential, not the provider key.
 4. Run `python -m uvicorn app.main:app --host 127.0.0.1 --port 8000` from `backend`.
-5. In `frontend`, run `npm ci` then `npm run dev`. Visit `http://localhost:5173/#admin`, enter the admin access credential and press **Generate AI Insights**. Demo counts are editable and explicitly synthetic. The existing landing page remains available at `/#home`.
+5. Sign in with the Admin role first. In `frontend`, run `npm ci` then `npm run dev`. Visit `http://localhost:5173/admin/insights`, enter the admin access credential and press **Generate AI Insights**. Demo counts are editable and explicitly synthetic. The existing landing page remains available at `/#home`.
 6. Production hosting must proxy `/api` to FastAPI using HTTPS. Vite supplies this proxy only for development.
 
 ## Contract and safeguards
