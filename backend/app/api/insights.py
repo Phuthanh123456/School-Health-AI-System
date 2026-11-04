@@ -1,24 +1,28 @@
-import secrets
+from fastapi import APIRouter, Depends, HTTPException, Response
+from sqlalchemy.orm import Session
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
-from app.config import settings
-from app.schemas.insights import Aggregates, InsightResponse
+from app.api.guards import require_role
+from app.database import get_db
+from app.schemas.insights import Aggregates, DashboardSnapshot, InsightResponse
+from app.services.dashboard import read_dashboard_snapshot
 from app.services.insights import generate_insights
 
-router = APIRouter(prefix="/api/admin", tags=["admin insights"])
-bearer = HTTPBearer(auto_error=False)
+router = APIRouter(prefix="/api/admin", tags=["admin insights"], dependencies=[Depends(require_role("admin"))])
 
 
-def require_admin(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
-    # Temporary fail-closed gate until the shared authentication story supplies RBAC.
-    if not settings.insights_admin_token:
-        raise HTTPException(503, "Quyền truy cập AI chưa được cấu hình.")
-    if not credentials or not secrets.compare_digest(credentials.credentials.encode(), settings.insights_admin_token.encode()):
-        raise HTTPException(403, "Cần quyền quản trị để tạo nhận xét AI.")
+def current_snapshot(db: Session = Depends(get_db)) -> DashboardSnapshot:
+    return read_dashboard_snapshot(db)
 
 
-@router.post("/ai-insights", response_model=InsightResponse, dependencies=[Depends(require_admin)])
-async def ai_insights(stats: Aggregates):
-    return await generate_insights(stats)
+@router.get("/dashboard-statistics", response_model=DashboardSnapshot)
+def dashboard_statistics(response: Response, snapshot: DashboardSnapshot = Depends(current_snapshot)):
+    response.headers["Cache-Control"] = "no-store"
+    return snapshot
+
+
+@router.post("/ai-insights", response_model=InsightResponse)
+async def ai_insights(stats: Aggregates, response: Response, snapshot: DashboardSnapshot = Depends(current_snapshot)):
+    if stats != snapshot.aggregates:
+        raise HTTPException(409, "Thống kê đã thay đổi. Vui lòng tải lại dashboard trước khi tạo nhận xét.")
+    response.headers["Cache-Control"] = "no-store"
+    return await generate_insights(snapshot.aggregates)

@@ -64,7 +64,6 @@ function RoleLandingPage({ role }: { role: Exclude<UserRole, 'nurse'> }) {
         <p className="text-sm font-semibold uppercase tracking-wide text-primary-strong">SchoolHealth</p>
         <h1 className="mt-4 font-display text-3xl font-bold tracking-tight">{content.title}</h1>
         <p className="mt-3 leading-7 text-muted">{content.description}</p>
-        {role === 'admin' && <a href="/#admin" className="mt-6 block font-semibold text-primary underline">AI Insights demo</a>}
         <button
           type="button"
           onClick={handleSignOut}
@@ -285,6 +284,7 @@ function ProtectedRoute({ role }: { role: UserRole }) {
 
   if (status !== 'authenticated') return null
   if (role === 'nurse') return <NurseStudents />
+  if (role === 'admin') return <AdminDashboard />
   return <RoleLandingPage role={role} />
 }
 
@@ -297,7 +297,7 @@ function App() {
   }, [])
   const pathname = window.location.pathname.replace(/\/$/, '')
 
-  if (pathname === '' && hash === '#admin') return <AdminDashboard />
+  if (pathname === '' && hash === '#admin') return <ProtectedRoute role="admin" />
 
   if (pathname === '/login') {
     return (

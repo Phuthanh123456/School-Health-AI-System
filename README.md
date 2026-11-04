@@ -95,9 +95,9 @@ Expect the service to report `healthy` and the query to return `1`. The database
 
 ## Testing and CI
 
-### AI insights preview (US-6.1)
+### Admin AI insights (US-6.1)
 
-The Admin preview at `/#admin` can request Ollama-backed insights from synthetic aggregate counts. See [US-6.1 setup, API contract, safeguards and integration limitations](docs/US-6.1.md). Configure the provider key only in the backend. Authenticated Admin sessions and real dashboard statistics still need to be connected before release.
+After signing in as Admin, `/admin` loads current school-wide counts directly from the database and can generate Ollama-backed insights. See [US-6.1 setup, API contract and safeguards](docs/US-6.1.md). Configure the provider key only on the backend. AI requests use the same authenticated API client and `VITE_API_URL` as sign-in. The old `/#admin` bookmark now requires an Admin session too.
 
 The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on pushes, pull requests, and manual dispatch. It is prepared to:
 

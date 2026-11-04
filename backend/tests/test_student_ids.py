@@ -201,6 +201,8 @@ def test_csv_import_is_repeatable_and_preserves_edits(client, monkeypatch):
         db.add(HealthProfile(
             student_id="DEMO-001", allergies="Legacy allergy", medical_notes="Legacy note",
         ))
+        # Core INSERT does not autoflush these ORM rows; PostgreSQL enforces the FK.
+        db.flush()
         db.execute(checkup_results.insert().values(
             session_id="session", student_id="DEMO-001", status="completed", height_cm=130.0,
         ))

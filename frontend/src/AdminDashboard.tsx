@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { authenticatedFetch, signOut } from './auth'
 
 export type AggregateStats = {
   total_students: number
   checkups_completed: number
   followups_pending: number
-  vision_flags: number
-  dental_flags: number
 }
 type Insights = {
   summary: string
@@ -15,30 +14,36 @@ type Insights = {
 }
 const labels: Record<keyof AggregateStats, string> = {
   total_students: 'Tổng học sinh', checkups_completed: 'Đã khám',
-  followups_pending: 'Chờ theo dõi', vision_flags: 'Cờ thị lực', dental_flags: 'Cờ răng miệng',
-}
-const demoStats: AggregateStats = {
-  total_students: 480, checkups_completed: 420, followups_pending: 36, vision_flags: 84, dental_flags: 63,
+  followups_pending: 'Chờ theo dõi',
 }
 const disclaimer = 'AI chỉ cung cấp thông tin tham khảo, không phải chẩn đoán hoặc chỉ định điều trị. Nhân viên y tế cần kiểm tra trước khi sử dụng.'
 
-// Integration seam: pass the CURRENT school-wide counts from the dashboard API.
-// Never pass a student collection or spread a dashboard API response into fetch.
-export function AIInsightsPanel({ stats, adminToken }: { stats: AggregateStats; adminToken: string }) {
+type DashboardSnapshot = { aggregates: AggregateStats; session_title: string | null; session_date: string | null }
+
+function isAggregates(value: unknown): value is AggregateStats {
+  if (!value || typeof value !== 'object') return false
+  const stats = value as AggregateStats
+  return Object.keys(labels).every(key => Number.isSafeInteger(stats[key as keyof AggregateStats]) && stats[key as keyof AggregateStats] >= 0)
+    && stats.checkups_completed <= stats.total_students && stats.followups_pending <= stats.checkups_completed
+}
+
+export function AIInsightsPanel({ stats }: { stats: AggregateStats }) {
   const [result, setResult] = useState<Insights | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [stale, setStale] = useState(false)
   const active = useRef<AbortController | null>(null)
   const snapshot = JSON.stringify(stats)
   useEffect(() => () => { active.current?.abort() }, [])
-  // If dashboard filters/counts or credentials change, discard in-flight responses.
+  // If dashboard counts change, discard in-flight responses.
   useEffect(() => {
     active.current?.abort()
     active.current = null
     setResult(null)
     setError('')
+    setStale(false)
     setLoading(false)
-  }, [snapshot, adminToken])
+  }, [snapshot])
 
   async function generate() {
     if (active.current) return
@@ -51,15 +56,17 @@ export function AIInsightsPanel({ stats, adminToken }: { stats: AggregateStats; 
     // An explicit allowlist prevents unexpected fields being sent to the backend.
     const payload: AggregateStats = {
       total_students: stats.total_students, checkups_completed: stats.checkups_completed,
-      followups_pending: stats.followups_pending, vision_flags: stats.vision_flags, dental_flags: stats.dental_flags,
+      followups_pending: stats.followups_pending,
     }
     try {
-      const response = await fetch('/api/admin/ai-insights', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      const response = await authenticatedFetch('/api/admin/ai-insights', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload), signal: controller.signal,
       })
       if (!response.ok) {
+        if (response.status === 409) setStale(true)
         const messages: Record<number, string> = {
+          409: 'Thống kê đã thay đổi. Nhấn Tải lại thống kê trước khi tạo nhận xét.',
           403: 'Cần thông tin truy cập quản trị hợp lệ.',
           422: 'Số liệu chưa hợp lệ hoặc chưa đủ 20 học sinh và 20 lượt khám. Hãy kiểm tra lại.',
           503: 'Dịch vụ AI chưa sẵn sàng. Vui lòng liên hệ quản trị viên.',
@@ -68,7 +75,7 @@ export function AIInsightsPanel({ stats, adminToken }: { stats: AggregateStats; 
         throw new Error(messages[response.status] || 'Chưa thể tạo nhận xét AI. Hãy thử lại sau.')
       }
       const data = await response.json() as Insights
-      if (typeof data.summary !== 'string' || !Array.isArray(data.recommendations) || !data.recommendations.every(x => typeof x === 'string') || typeof data.disclaimer !== 'string') {
+      if (!data || typeof data.summary !== 'string' || !Array.isArray(data.recommendations) || !data.recommendations.every(x => typeof x === 'string') || typeof data.disclaimer !== 'string' || !isAggregates(data.aggregates) || !(Object.keys(labels) as (keyof AggregateStats)[]).every(key => data.aggregates[key] === payload[key])) {
         throw new Error('Kết quả AI chưa hợp lệ. Hãy thử lại.')
       }
       if (active.current === controller) setResult(data)
@@ -87,7 +94,7 @@ export function AIInsightsPanel({ stats, adminToken }: { stats: AggregateStats; 
     <div className="flex flex-wrap items-center justify-between gap-5">
       <div><p className="text-xs font-bold tracking-widest text-primary">AI · TỔNG QUAN CẤP TRƯỜNG</p>
         <h2 id="ai-title" className="mt-2 font-display text-2xl font-bold">Nhận xét từ số liệu</h2></div>
-      <button onClick={generate} disabled={loading || !adminToken.trim() || !enoughData} className="min-h-12 rounded-full bg-primary px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 hover:bg-primary-strong focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
+      <button onClick={generate} disabled={loading || stale || !enoughData} className="min-h-12 rounded-full bg-primary px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 hover:bg-primary-strong focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
         {loading ? 'Đang tạo nhận xét…' : 'Generate AI Insights'}
       </button>
     </div>
@@ -108,17 +115,46 @@ export function AIInsightsPanel({ stats, adminToken }: { stats: AggregateStats; 
 }
 
 export default function AdminDashboard() {
-  const [adminToken, setAdminToken] = useState('')
-  const [stats, setStats] = useState(demoStats)
+  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const active = useRef<AbortController | null>(null)
+  const reload = useCallback(async () => {
+    active.current?.abort()
+    const controller = new AbortController()
+    active.current = controller
+    setLoading(true)
+    setError('')
+    setSnapshot(null)
+    const timer = window.setTimeout(() => controller.abort(), 15000)
+    try {
+      const response = await authenticatedFetch('/api/admin/dashboard-statistics', { signal: controller.signal })
+      if (!response.ok) throw new Error(response.status === 403 ? 'Bạn không có quyền xem thống kê Admin.' : 'Chưa tải được thống kê nhà trường. Hãy thử lại.')
+      const data = await response.json() as DashboardSnapshot
+      if (!data || !isAggregates(data.aggregates) || !(data.session_title === null || typeof data.session_title === 'string') || !(data.session_date === null || typeof data.session_date === 'string')) throw new Error('Thống kê trả về không hợp lệ.')
+      if (active.current === controller) setSnapshot(data)
+    } catch (failure) {
+      if (active.current === controller) setError(controller.signal.aborted ? 'Tải thống kê quá lâu. Hãy thử lại.' : failure instanceof Error ? failure.message : 'Không thể tải thống kê.')
+    } finally {
+      window.clearTimeout(timer)
+      if (active.current === controller) { active.current = null; setLoading(false) }
+    }
+  }, [])
+  useEffect(() => { void reload(); return () => { active.current?.abort(); active.current = null } }, [reload])
+
   return <main className="min-h-screen bg-background px-5 py-8 text-foreground sm:px-10">
     <div className="mx-auto max-w-6xl">
-      <header className="flex items-center justify-between border-b border-border pb-6"><a href="#home" className="text-lg font-bold">school<span className="text-primary">health</span></a><span className="text-sm text-muted">Admin · Bản xem trước</span></header>
-      <div className="py-10"><p className="text-xs font-bold tracking-widest text-primary">SỨC KHỎE HỌC ĐƯỜNG</p><h1 className="mt-3 font-display text-4xl font-bold">Tổng quan nhà trường</h1><p className="mt-4 max-w-2xl leading-7 text-muted">Theo dõi các số đếm hiện tại và tạo nhận xét ngắn gọn để hỗ trợ lập kế hoạch.</p></div>
-      <aside className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">Dữ liệu demo giả lập — chưa kết nối API thống kê hoặc hệ thống đăng nhập. Có thể thay đổi số đếm để thử nghiệm; đây không phải dữ liệu học sinh thật.</aside>
-      <section aria-label="Thống kê tổng hợp hiện tại" className="mb-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">{(Object.keys(labels) as (keyof AggregateStats)[]).map(key => <label key={key} className="rounded-2xl border border-border bg-white p-5"><span className="text-sm text-muted">{labels[key]}</span><input aria-label={labels[key]} type="number" min="0" max="1000000" step="1" value={stats[key]} onChange={e => setStats({ ...stats, [key]: Number(e.target.value) })} className="mt-3 w-full border-b border-border bg-transparent py-2 text-3xl font-bold focus:outline-primary" /></label>)}</section>
-      <div className="mb-6 rounded-2xl border border-border bg-white p-5"><label htmlFor="admin-access" className="text-sm font-semibold">Thông tin truy cập quản trị (môi trường phát triển)</label><input id="admin-access" type="password" autoComplete="off" value={adminToken} onChange={e => setAdminToken(e.target.value)} className="mt-2 block min-h-11 w-full max-w-md rounded-lg border border-border px-3"/><p className="mt-2 text-xs leading-6 text-muted">Dùng mã INSIGHTS_ADMIN_TOKEN do backend cấp, không phải khóa Ollama. Chỉ giữ trong phiên trang, không lưu vào trình duyệt. Sẽ thay bằng đăng nhập Admin khi tích hợp.</p></div>
-      <AIInsightsPanel stats={stats} adminToken={adminToken} />
-      <footer className="py-6 text-xs text-muted">Các nhóm cờ và chờ theo dõi có thể trùng nhau. Không suy luận xu hướng thời gian từ một bản thống kê.</footer>
+      <header className="flex items-center justify-between border-b border-border pb-6"><a href="/" className="text-lg font-bold">school<span className="text-primary">health</span></a><button className="min-h-11 rounded-full border border-border px-4 text-sm" onClick={() => { signOut(); window.location.assign('/login') }}>Đăng xuất</button></header>
+      <div className="flex flex-wrap items-end justify-between gap-5 py-10"><div><p className="text-xs font-bold tracking-widest text-primary">ADMIN · SỨC KHỎE HỌC ĐƯỜNG</p><h1 className="mt-3 font-display text-4xl font-bold">Tổng quan nhà trường</h1><p className="mt-4 max-w-2xl leading-7 text-muted">Số đếm tổng hợp từ cơ sở dữ liệu, theo đợt khám mới nhất của nhà trường.</p></div><button onClick={() => void reload()} disabled={loading} className="min-h-11 rounded-full border border-border bg-white px-5 font-semibold disabled:opacity-50">Tải lại thống kê</button></div>
+      {loading && <p role="status" className="mb-6 rounded-2xl bg-white p-5">Đang tải thống kê nhà trường…</p>}
+      {error && <p role="alert" className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950">{error}</p>}
+      {snapshot && <>
+        <aside className="mb-6 rounded-2xl border border-border bg-white p-4 text-sm leading-6">{snapshot.session_date ? <>Đợt khám: <strong>{snapshot.session_title}</strong> · {snapshot.session_date}</> : 'Chưa có đợt khám nào. Các số đếm đã khám và chờ theo dõi hiện bằng 0.'} Không có tên, mã hoặc hồ sơ cá nhân trong thống kê này.</aside>
+        <section aria-label="Thống kê tổng hợp hiện tại" className="mb-6 grid gap-3 sm:grid-cols-3">{(Object.keys(labels) as (keyof AggregateStats)[]).map(key => <article key={key} className="rounded-2xl border border-border bg-white p-5"><p className="text-sm text-muted">{labels[key]}</p><p aria-label={labels[key]} className="mt-3 text-3xl font-bold">{snapshot.aggregates[key].toLocaleString('vi-VN')}</p></article>)}</section>
+        {snapshot.aggregates.total_students === 0 && <p className="mb-6 rounded-2xl bg-white p-5">Chưa có học sinh trong hệ thống.</p>}
+        <AIInsightsPanel stats={snapshot.aggregates} />
+      </>}
+      <footer className="py-6 text-xs leading-6 text-muted">Đã khám bao gồm học sinh hoàn thành khám và học sinh cần theo dõi ở đợt mới nhất. Chờ theo dõi là một phần của nhóm đã khám. Không suy luận xu hướng thời gian từ một bản thống kê.</footer>
     </div>
   </main>
 }
