@@ -11,7 +11,8 @@ from app.database import Base
 
 class Student(Base):
     __tablename__ = "students"
-    __table_args__ = {"schema": "schoolhealth_demo"}
+    # The profile API maps this same canonical student table as well.
+    __table_args__ = {"schema": "schoolhealth_demo", "extend_existing": True}
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     full_name: Mapped[str] = mapped_column(Text, nullable=False)
@@ -45,7 +46,7 @@ class CheckupResult(Base):
         CheckConstraint("height_cm IS NULL OR height_cm > 0", name="ck_result_height_positive"),
         CheckConstraint("weight_kg IS NULL OR weight_kg > 0", name="ck_result_weight_positive"),
         CheckConstraint("bmi IS NULL OR bmi > 0", name="ck_result_bmi_positive"),
-        {"schema": "schoolhealth_demo"},
+        {"schema": "schoolhealth_demo", "extend_existing": True},
     )
 
     session_id: Mapped[str] = mapped_column(

@@ -6,7 +6,8 @@ from app.database import Base
 
 class Student(Base):
     __tablename__ = "students"
-    __table_args__ = {"schema": "schoolhealth_demo"}
+    # Checkup routes also map the canonical student table.
+    __table_args__ = {"schema": "schoolhealth_demo", "extend_existing": True}
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     full_name: Mapped[str] = mapped_column(Text)
@@ -28,12 +29,13 @@ class HealthProfile(Base):
 parent_students = Table(
     "parent_students", Base.metadata,
     Column("parent_id", Text, primary_key=True),
-    Column("student_id", Text, ForeignKey("public.students.id"), primary_key=True),
-    schema="public",
+    Column("student_id", Text, ForeignKey("schoolhealth_demo.students.id"), primary_key=True),
+    schema="schoolhealth_demo",
 )
 checkup_results = Table(
     "checkup_results", Base.metadata,
     Column("session_id", Text, primary_key=True),
-    Column("student_id", Text, ForeignKey("public.students.id"), primary_key=True),
-    schema="public",
+    Column("student_id", Text, ForeignKey("schoolhealth_demo.students.id"), primary_key=True),
+    schema="schoolhealth_demo",
+    extend_existing=True,
 )
