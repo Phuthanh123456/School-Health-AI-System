@@ -1,5 +1,7 @@
 # US-6.1 — AI-assisted school health insights
 
+> Historical prototype notes: the synthetic-count Admin preview described below is no longer part of the active dashboard. The current US-5.2 Admin screen uses the authenticated, database-backed overview documented in the repository README.
+
 ## Run and review
 
 1. In `backend`, install `requirements.txt`. Copy `.env.example` to `.env` only if no local configuration exists.

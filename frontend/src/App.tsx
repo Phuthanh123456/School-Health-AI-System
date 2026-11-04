@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import AdminHealthManagement from './AdminHealthManagement'
 import AdminDashboard from './AdminDashboard'
+import AIInsightsPreview from './AIInsightsPreview'
 import ParentDashboard from './ParentDashboard'
 import LoginPage from './LoginPage'
 import NurseStudents from './NurseStudents'
@@ -175,7 +176,7 @@ function LandingPage() {
   )
 }
 
-function ProtectedRoute({ role, insights = false }: { role: UserRole; insights?: boolean }) {
+function ProtectedRoute({ role, insights = false, overview = false }: { role: UserRole; insights?: boolean; overview?: boolean }) {
   const [status, setStatus] = useState<'checking' | 'authenticated' | 'unavailable'>('checking')
   const [retry, setRetry] = useState(0)
 
@@ -253,7 +254,8 @@ function ProtectedRoute({ role, insights = false }: { role: UserRole; insights?:
   }
 
   if (status !== 'authenticated') return null
-  if (role === 'admin' && insights) return <AdminDashboard />
+  if (role === 'admin' && insights) return <AIInsightsPreview />
+  if (role === 'admin' && overview) return <AdminDashboard />
   if (role === 'nurse') return <NurseWorkspace />
   return <RoleLandingPage role={role} />
 }
@@ -311,6 +313,7 @@ function App() {
   if (pathname === '/nurse') return <ProtectedRoute role="nurse" />
   if (pathname === '/admin') return <ProtectedRoute role="admin" />
   if (pathname === '/admin/insights') return <ProtectedRoute role="admin" insights />
+  if (pathname === '/admin/overview') return <ProtectedRoute role="admin" overview />
   if (pathname === '/parent') return <ProtectedRoute role="parent" />
 
   return <LandingPage />

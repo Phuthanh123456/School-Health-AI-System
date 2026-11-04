@@ -79,4 +79,4 @@ npx playwright test
 
 Real PostgreSQL tests use a disposable `management_test_*` schema and remove it after the test. They exercise the CSV importer, genuine JWT role/ownership checks, preservation of profile/password edits and removed links after reseeding, and two concurrent Admin writes against one version. Set `RUN_POSTGRES_TESTS=1` and `DATABASE_URL` to run `backend/tests/test_management_postgres.py`. CI starts a PostgreSQL service and runs this test separately after the default suite.
 
-The previous AI preview remains available at `/admin/insights` with Admin route protection and its existing temporary AI credential gate. It is separate from the SCRUM-52 record-management page.
+The historical AI preview remains at `/admin/insights` with Admin route protection and its existing temporary AI credential gate. The database-backed US-5.2 overview is available at `/admin/overview`, separate from the SCRUM-52 record-management page at `/admin`.

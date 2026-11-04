@@ -61,6 +61,10 @@ The historical `scripts/seed_demo.sql` is retained for reference; Compose no lon
 
 See [SCRUM-51/52 accounts, API contracts, security and demo checks](../docs/SCRUM-51-52.md), [checkup session endpoints](docs/checkup-sessions-api.md), and [the shared schema contract](docs/data-schema.md).
 
+## US-5.2 Admin school overview
+
+Admins can read the school-wide aggregate at `GET /api/admin/dashboard` using a valid Admin Bearer token. The response includes distinct student count, saved checkup record count, and Normal/Needs Follow-up counts. The endpoint does not expose student-level records or classify free-text notes. The matching Admin view is `/admin/overview`.
+
 ## Nurse checkup session selection and result entry
 
 The checkup API uses the seeded `schoolhealth_demo` tables. Apply

@@ -104,7 +104,9 @@ The database is reachable by Compose services at `db:5432`; the API is available
 
 After login, Parents open `/parent` to view their own profile and linked children's health information. Admins open `/admin` to filter student health records by Class, Parent and Nurse, paginate results, and assign or remove Parent/Nurse links. The School filter was removed from this scope. See [API contracts, data rules, demo accounts and acceptance checks](docs/SCRUM-51-52.md).
 
-The seed now imports Zen's fictional CSVs into the shared `schoolhealth_demo` schema. It preserves saved edits and explicit Admin assignment removals when re-run. The old AI preview is at `/admin/insights`; its server-side provider configuration and temporary credential gate are documented in [US-6.1](docs/US-6.1.md).
+The US-5.2 database-backed school overview is available to Admins at `/admin/overview`. It shows distinct students, saved student/session checkup records, Nurse-selected status counts and a status distribution chart. The status table and cards use the same optional metrics from the seeded dataset; no diagnosis is inferred from free-text notes.
+
+The seed now imports Zen's fictional CSVs into the shared `schoolhealth_demo` schema. It preserves saved edits and explicit Admin assignment removals when re-run. The historical AI preview remains at `/admin/insights`; its server-side provider configuration and temporary credential gate are documented in [US-6.1](docs/US-6.1.md).
 
 The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on pushes, pull requests, and manual dispatch. It:
 
