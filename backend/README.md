@@ -69,9 +69,55 @@ to students `DEMO-001` and `DEMO-017`. Rerunning the seed fills in missing demo
 rows and preserves existing rows, including profile edits and password hashes.
 
 The tables live in the `schoolhealth_demo` schema. The seed provides the data for
-the login, parent visibility, Nurse entry, and dashboard stories. Those flows
-still need application models and endpoints wired to the demo tables, or seed
-data migrated into the team's application schema once it is agreed.
+the login, parent visibility, Nurse entry, and dashboard stories. Login, parent
+visibility, and dashboard flows still need application models and endpoints
+wired to the demo tables, or seed data migrated into the team's application
+schema once it is agreed.
+
+## Nurse checkup result entry
+
+The current checkup API uses the seeded `schoolhealth_demo` tables. Apply
+`backend/scripts/migrate_checkup_results.sql` to an existing seeded database
+before starting the updated API. Fresh demo databases receive the same columns
+from `backend/scripts/seed_demo.sql`. The migration adds BMI, vision, and audit
+timestamps while retaining existing demo statuses. The existing composite
+primary key `(session_id, student_id)` remains the database uniqueness rule.
+
+Checkup routes use HTTP Basic credentials checked against the seeded accounts;
+use the Nurse account and demo password configured when the database was
+seeded. Serve these routes over HTTPS outside local development. Available
+routes are:
+
+- `GET /checkups/sessions`
+- `GET /checkups/sessions/{session_id}/students?q={name-or-student-code}`
+- `GET /checkups/sessions/{session_id}/students/{student_id}/result`
+- `PUT /checkups/sessions/{session_id}/students/{student_id}/result`
+
+The student search derives participation from the existing
+`checkup_results(session_id, student_id)` rows, including pending and absent
+demo rows. The API accepts only the Nurse-selected `Normal` and
+`Needs Follow-up` values and maps them to the existing database values
+`completed` and `follow_up`. BMI is calculated from centimeters and kilograms;
+the UI rounds it to two decimals for display.
+
+Example save request:
+
+```http
+PUT /checkups/sessions/DEMO-CURRENT/students/DEMO-001/result
+Authorization: Basic <nurse credentials>
+Content-Type: application/json
+
+{
+  "height_cm": 150,
+  "weight_kg": 42.5,
+  "vision": null,
+  "notes": "Synthetic demo note",
+  "status": "Normal"
+}
+```
+
+The frontend uses `VITE_API_BASE_URL` when set and otherwise calls
+`http://localhost:8000`.
 
 ## Docker integration
 

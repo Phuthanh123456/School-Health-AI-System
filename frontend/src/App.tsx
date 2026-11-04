@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { NurseCheckupEntry } from './NurseCheckupEntry'
+
 const features = [
   {
     number: '01',
@@ -34,6 +37,10 @@ function ArrowIcon() {
 }
 
 function App() {
+  const [nurseEntryOpen, setNurseEntryOpen] = useState(false)
+
+  if (nurseEntryOpen) return <NurseCheckupEntry onClose={() => setNurseEntryOpen(false)} />
+
   return (
     <main className="min-h-screen overflow-hidden bg-background text-foreground">
       <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-6 sm:px-10">
@@ -52,6 +59,9 @@ function App() {
           <a href="#features" className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2.5 text-sm font-semibold transition duration-200 hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
             Bắt đầu khám phá <ArrowIcon />
           </a>
+          <button type="button" onClick={() => setNurseEntryOpen(true)} className="ml-3 hidden min-h-11 items-center rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-mid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 lg:inline-flex">
+            Nhập kết quả khám
+          </button>
         </header>
 
         <section id="home" className="grid flex-1 items-center gap-14 py-16 lg:grid-cols-[1.02fr_0.98fr] lg:py-20">
@@ -71,6 +81,9 @@ function App() {
               SchoolHealth kết nối hồ sơ, kết quả khám và những người đồng hành — để sức khỏe học đường được chăm sóc liên tục, rõ ràng và an toàn.
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-4">
+              <button type="button" onClick={() => setNurseEntryOpen(true)} className="inline-flex min-h-12 items-center rounded-full bg-primary px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-sky-mid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                Nhập kết quả khám
+              </button>
               <a href="#features" className="inline-flex min-h-12 cursor-pointer items-center rounded-full bg-primary px-6 py-3.5 text-sm font-semibold text-on-primary shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-sky-mid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                 Khám phá nền tảng <ArrowIcon />
               </a>
