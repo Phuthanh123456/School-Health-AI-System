@@ -10,7 +10,7 @@ from sqlalchemy.schema import CreateSchema, DropSchema
 
 from app.database import Base, engine as application_engine, get_db
 from app.main import app
-from app.models.student import HealthProfile, Student
+from app.models.student import HealthProfile, Student, parent_students, checkup_results
 
 
 @pytest.fixture
@@ -33,7 +33,7 @@ def client():
             execution_options={"schema_translate_map": {"schoolhealth_demo": None}},
         )
 
-    tables = [Student.__table__, HealthProfile.__table__]
+    tables = [Student.__table__, HealthProfile.__table__, parent_students, checkup_results]
     Base.metadata.create_all(engine, tables=tables)
 
     def test_db():
@@ -135,3 +135,25 @@ def test_existing_demo_id_remains_readable_and_editable(client):
     response = client.patch("/students/DEMO-001", json={"medical_notes": "Updated"})
     assert response.status_code == 200, response.text
     assert client.get("/students/DEMO-001").json()["medical_notes"] == "Updated"
+
+
+def test_search_and_delete_student_with_dependent_records(client):
+    for student_id in ("DEMO025", "DEMO026"):
+        assert client.post("/students", json={
+            "id": student_id, "full_name": "Synthetic Student", "class_name": "6A1",
+        }).status_code == 201
+    assert [s["id"] for s in client.get("/students?student_id=demo025").json()] == ["DEMO025"]
+    assert len(client.get("/students?student_id=DEMO02").json()) == 2
+    assert client.get("/students?student_id=%25").json() == []
+    database = app.dependency_overrides[get_db]()
+    db = next(database)
+    try:
+        db.execute(parent_students.insert().values(parent_id="parent", student_id="DEMO025"))
+        db.execute(checkup_results.insert().values(session_id="session", student_id="DEMO025"))
+        db.commit()
+    finally:
+        database.close()
+    assert client.delete("/students/DEMO025").status_code == 204
+    assert client.get("/students/DEMO025").status_code == 404
+    assert client.delete("/students/DEMO025").status_code == 404
+    assert client.get("/students/DEMO026").status_code == 200
