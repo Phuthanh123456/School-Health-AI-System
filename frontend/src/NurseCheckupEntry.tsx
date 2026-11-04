@@ -363,6 +363,10 @@ export function NurseCheckupEntry({
                   if (savingRef.current) return
                   rosterAbortRef.current?.abort()
                   rosterRequestRef.current += 1
+                  // The aborted request's finally block is intentionally guarded by
+                  // its request id. Release its loading state here when its session
+                  // is superseded, otherwise the search button stays disabled.
+                  setBusy(false)
                   clearStudentSelection()
                   setSessionId(event.target.value)
                   setStudents([])

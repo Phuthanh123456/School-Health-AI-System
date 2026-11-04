@@ -25,6 +25,7 @@ const session = {
   class_name: '6A',
   participant_count: 2,
 }
+const secondSession = { ...session, id: 'SESSION-B', title: 'Follow-up checkup' }
 const roster = [
   { id: 'STU-001', student_code: 'STU-001', full_name: 'Alex Student', class_name: '6A' },
   { id: 'STU-002', student_code: 'STU-002', full_name: 'Blair Student', class_name: '6A' },
@@ -97,6 +98,53 @@ describe('Nurse checkup result selection', () => {
 
     expect(screen.getByRole('button', { name: /Blair Student/ }).getAttribute('aria-pressed')).toBe('true')
     expect((screen.getByLabelText('Cân nặng (kg)') as HTMLInputElement).value).toBe('')
+  })
+
+  it('unlocks student search immediately when changing sessions during an in-flight search', async () => {
+    const pendingSessionA = deferred<Response>()
+    const fetchMock = vi.mocked(fetch)
+    let sessionASignal: AbortSignal | undefined
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/checkups/sessions')) return jsonResponse([session, secondSession])
+      if (url.includes('/sessions/SESSION-A/students?')) {
+        sessionASignal = init?.signal ?? undefined
+        return pendingSessionA.promise
+      }
+      if (url.includes('/sessions/SESSION-B/students?')) return jsonResponse([roster[1]])
+      return jsonResponse({ detail: 'Unexpected request' }, 500)
+    })
+
+    render(
+      <NurseCheckupEntry
+        route={{ kind: 'nurse-entry' }}
+        onClose={() => undefined}
+        onSelectSession={() => undefined}
+        onContinueToResults={() => undefined}
+      />,
+    )
+    fireEvent.change(document.querySelector('input[autocomplete="username"]')!, { target: { value: 'nurse' } })
+    fireEvent.change(document.querySelector('input[autocomplete="current-password"]')!, { target: { value: 'password' } })
+    fireEvent.click(document.querySelector('form button')!)
+
+    await screen.findByRole('combobox')
+    const sessionSelect = document.querySelector('select')!
+    fireEvent.change(sessionSelect, { target: { value: 'SESSION-A' } })
+    const searchButton = screen.getAllByRole('button').find((button) => button.textContent?.includes('Tìm')) as HTMLButtonElement
+    fireEvent.click(searchButton)
+    await waitFor(() => expect(sessionASignal).toBeDefined())
+
+    fireEvent.change(sessionSelect, { target: { value: 'SESSION-B' } })
+    expect(sessionASignal?.aborted).toBe(true)
+    expect(searchButton.disabled).toBe(false)
+
+    fireEvent.click(searchButton)
+    expect(await screen.findByRole('button', { name: /Blair Student/ })).toBeTruthy()
+
+    // Simulate a fetch implementation that resolves despite being aborted.
+    await act(async () => { pendingSessionA.resolve(jsonResponse([roster[0]])) })
+    expect(screen.queryByRole('button', { name: /Alex Student/ })).toBeNull()
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/sessions/SESSION-B/students?'))).toBe(true)
   })
 
   it('keeps the save target locked until the write finishes', async () => {
