@@ -14,6 +14,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   if (response.status === 422) throw new Error('Kiểm tra các trường bắt buộc và độ dài thông tin.')
   if (response.status === 404) throw new Error('Không tìm thấy hồ sơ học sinh.')
   if (!response.ok) throw new Error('Không thể hoàn tất yêu cầu. Vui lòng thử lại.')
+  if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }
 
@@ -22,14 +23,14 @@ function message(error: unknown) {
   return error instanceof Error ? error.message : 'Đã xảy ra lỗi.'
 }
 
-function ProfileForm({ profile, onSaved, onSaving }: {
+function ProfileForm({ profile, onSaved, onSaving, busy }: {
   profile: Profile | null
   onSaved: (saved: Profile) => void
   onSaving: (saving: boolean) => void
+  busy: boolean
 }) {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const fields = new FormData(event.currentTarget)
@@ -67,7 +68,7 @@ function ProfileForm({ profile, onSaved, onSaving }: {
 
   return (
     <form onSubmit={save} className="mt-5">
-      <fieldset disabled={saving} className="grid gap-4">
+      <fieldset disabled={saving || busy} className="grid gap-4">
         <label className="text-sm font-semibold">Mã học sinh
           <input className={inputStyle} name="id" defaultValue={profile?.id} readOnly={Boolean(profile)} required maxLength={50}
             pattern="[A-Za-z0-9]+" title="Viết liền, chỉ dùng chữ không dấu và số." />
@@ -103,6 +104,29 @@ export default function NurseStudents() {
   const [detailError, setDetailError] = useState('')
   const [notice, setNotice] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const [search, setSearch] = useState('')
+
+  const visibleStudents = students?.filter((student) =>
+    student.id.toLowerCase().includes(search.trim().toLowerCase()))
+
+  async function removeStudent() {
+    if (!profile || !window.confirm(`Xóa học sinh ${profile.id}? Hồ sơ sức khỏe, liên kết phụ huynh và kết quả khám của học sinh cũng sẽ bị xóa.`)) return
+    setSaving(true)
+    setDetailError('')
+    try {
+      await request<void>(`/${encodeURIComponent(profile.id)}`, { method: 'DELETE' })
+      setStudents((current) => current?.filter((student) => student.id !== profile.id) ?? [])
+      setProfile(null)
+      setSelection(null)
+      setAdding(false)
+      setNotice('Đã xóa học sinh.')
+    } catch (error) {
+      setDetailError(message(error))
+    } finally {
+      setSaving(false)
+    }
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -154,11 +178,15 @@ export default function NurseStudents() {
       <div className="grid items-start gap-5 md:grid-cols-2">
         <section className="min-w-0 rounded-2xl border border-border bg-white p-4 sm:p-5">
           <h2 className="text-lg font-bold">Danh sách học sinh {students && `(${students.length})`}</h2>
+          <label className="mt-3 block text-sm font-semibold">Tìm theo mã học sinh
+            <input type="search" className={inputStyle} value={search} maxLength={50}
+              onChange={(event) => setSearch(event.target.value)} placeholder="Nhập mã học sinh" />
+          </label>
           {listError && <p role="alert" className="mt-3 text-sm text-red-700">{listError}</p>}
           {!students && !listError && <p role="status" className="mt-3 text-sm text-muted">Đang tải danh sách…</p>}
           {students?.length === 0 && <p className="mt-3 text-sm text-muted">Chưa có học sinh.</p>}
           <ul className="mt-3 max-h-[32rem] divide-y divide-border overflow-auto">
-            {students?.map((student) => (
+            {visibleStudents?.map((student) => (
               <li key={student.id}>
                 <button type="button" disabled={saving} aria-pressed={selection === student.id} onClick={() => open(student.id)}
                   className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-background aria-pressed:bg-primary-soft">
@@ -168,14 +196,20 @@ export default function NurseStudents() {
               </li>
             ))}
           </ul>
+          {students && students.length > 0 && visibleStudents?.length === 0 &&
+            <p className="mt-3 text-sm text-muted">Không tìm thấy mã học sinh phù hợp.</p>}
         </section>
         <section className="rounded-2xl border border-border bg-white p-4 sm:p-5">
           <h2 className="text-lg font-bold">{adding ? 'Thêm học sinh mới' : 'Hồ sơ học sinh'}</h2>
           {notice && <p role="status" className="mt-3 text-sm font-semibold text-green-800">{notice}</p>}
           {detailError && <p role="alert" className="mt-3 text-sm text-red-700">{detailError}</p>}
           {adding || profile
-            ? <ProfileForm key={adding ? 'new' : JSON.stringify(profile)} profile={profile} onSaved={saved} onSaving={setSaving} />
+            ? <ProfileForm key={adding ? 'new' : JSON.stringify(profile)} profile={profile} onSaved={saved} onSaving={setSaving} busy={saving} />
             : !detailError && <p className="mt-3 text-sm text-muted">{selection ? 'Đang tải hồ sơ…' : 'Chọn một học sinh để xem hồ sơ.'}</p>}
+          {profile && <button type="button" disabled={saving} onClick={removeStudent}
+            className="mt-4 rounded-lg border border-red-700 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">
+            Xóa học sinh
+          </button>}
         </section>
       </div>
     </main>

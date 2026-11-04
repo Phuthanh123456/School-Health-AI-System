@@ -1,12 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.student import HealthProfile, Student
+from app.models.student import HealthProfile, Student, checkup_results, parent_students
 from app.schemas.student import StudentCreate, StudentProfile, StudentSummary, StudentUpdate
 
 
@@ -26,8 +26,14 @@ def read_profile(db: Session, student_id: str) -> StudentProfile:
 
 
 @router.get("")
-def list_students(db: Annotated[Session, Depends(get_db)]) -> list[StudentSummary]:
-    students = db.scalars(select(Student).order_by(Student.id))
+def list_students(
+    db: Annotated[Session, Depends(get_db)],
+    student_id: Annotated[str | None, Query(max_length=50)] = None,
+) -> list[StudentSummary]:
+    query = select(Student).order_by(Student.id)
+    if student_id and student_id.strip():
+        query = query.where(Student.id.icontains(student_id.strip(), autoescape=True))
+    students = db.scalars(query)
     return [StudentSummary.model_validate(student) for student in students]
 
 
@@ -88,3 +94,16 @@ def update_student(
             )
         db.flush()
         return read_profile(db, student_id)
+
+
+@router.delete("/{student_id}", status_code=204)
+def delete_student(student_id: str, db: Annotated[Session, Depends(get_db)]) -> Response:
+    with db.begin():
+        student = db.get(Student, student_id, with_for_update=True)
+        if student is None:
+            raise HTTPException(status_code=404, detail="Student not found")
+        db.execute(delete(checkup_results).where(checkup_results.c.student_id == student_id))
+        db.execute(delete(parent_students).where(parent_students.c.student_id == student_id))
+        db.execute(delete(HealthProfile).where(HealthProfile.student_id == student_id))
+        db.delete(student)
+    return Response(status_code=204)
