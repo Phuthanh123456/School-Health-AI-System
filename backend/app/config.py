@@ -30,6 +30,14 @@ class Settings:
                 password=os.environ["POSTGRES_PASSWORD"],
             )
         self.cors_origins: list[str] = _parse_origins(os.getenv("CORS_ORIGINS"))
+        self.auth_token_secret = os.getenv("AUTH_TOKEN_SECRET") or None
+        self.auth_token_issuer = os.getenv("AUTH_TOKEN_ISSUER", "schoolhealth-api")
+        try:
+            self.auth_token_ttl_seconds = int(os.getenv("AUTH_TOKEN_TTL_SECONDS", "3600"))
+        except ValueError as exc:
+            raise ValueError("AUTH_TOKEN_TTL_SECONDS must be an integer") from exc
+        if not 60 <= self.auth_token_ttl_seconds <= 86_400:
+            raise ValueError("AUTH_TOKEN_TTL_SECONDS must be between 60 and 86400")
 
 
 settings = Settings()

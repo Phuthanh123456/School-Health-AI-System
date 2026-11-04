@@ -8,6 +8,7 @@ from pathlib import Path
 
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.schema import CreateSchema
 
 from app.database import Base, engine
 from app.models.student import (
@@ -57,7 +58,18 @@ def seed(folder: Path, password: str) -> None:
 
     with engine.begin() as connection:
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public"))
+        connection.execute(CreateSchema("schoolhealth_demo", if_not_exists=True))
         Base.metadata.create_all(connection)
+        # Older seeded schemas predate the vision fields added by the Nurse workspace.
+        schema = connection.get_execution_options().get(
+            "schema_translate_map", {}
+        ).get("schoolhealth_demo", "schoolhealth_demo")
+        schema = schema or "public"
+        connection.execute(text(
+            f'ALTER TABLE "{schema}".checkup_results '
+            "ADD COLUMN IF NOT EXISTS vision_left TEXT, "
+            "ADD COLUMN IF NOT EXISTS vision_right TEXT"
+        ))
         for row in account_rows:
             connection.execute(insert(accounts).values(
                 **row, password_hash=func.public.crypt(password, func.public.gen_salt("bf", 10))
@@ -90,6 +102,50 @@ def seed(folder: Path, password: str) -> None:
             connection.execute(insert(checkup_sessions).values(**row).on_conflict_do_nothing())
         for row in results:
             connection.execute(insert(checkup_results).values(**row).on_conflict_do_nothing())
+
+        # Convert the earlier SQL-seed IDs (DEMO-001) to the CSV IDs (DEMO001)
+        # without dropping health profiles or checkup history.
+        for student in students:
+            if not student.id.startswith("DEMO") or not student.id[4:].isdigit():
+                continue
+            old_id = f"DEMO-{student.id[4:]}"
+            legacy = connection.execute(
+                select(Student.id, Student.full_name, Student.class_name)
+                .where(Student.id == old_id)
+            ).mappings().one_or_none()
+            if legacy is None:
+                continue
+            connection.execute(insert(Student).values(
+                id=student.id, full_name=legacy["full_name"], class_name=legacy["class_name"]
+            ).on_conflict_do_update(
+                index_elements=[Student.id],
+                set_={"full_name": legacy["full_name"], "class_name": legacy["class_name"]},
+            ))
+            old_profile = connection.execute(select(
+                HealthProfile.student_id, HealthProfile.allergies, HealthProfile.medical_notes
+            ).where(
+                HealthProfile.student_id == old_id
+            )).mappings().one_or_none()
+            if old_profile is not None:
+                connection.execute(insert(HealthProfile).values(
+                    student_id=student.id,
+                    allergies=old_profile["allergies"],
+                    medical_notes=old_profile["medical_notes"],
+                ).on_conflict_do_update(
+                    index_elements=[HealthProfile.student_id],
+                    set_={"allergies": old_profile["allergies"], "medical_notes": old_profile["medical_notes"]},
+                ))
+            for old_result in connection.execute(select(checkup_results).where(
+                checkup_results.c.student_id == old_id
+            )).mappings():
+                copied_result = dict(old_result)
+                copied_result["student_id"] = student.id
+                connection.execute(insert(checkup_results).values(**copied_result).on_conflict_do_nothing())
+            connection.execute(delete(checkup_results).where(checkup_results.c.student_id == old_id))
+            connection.execute(delete(parent_students).where(parent_students.c.student_id == old_id))
+            connection.execute(delete(student_nurses).where(student_nurses.c.student_id == old_id))
+            connection.execute(delete(HealthProfile).where(HealthProfile.student_id == old_id))
+            connection.execute(delete(Student).where(Student.id == old_id))
 
 
 if __name__ == "__main__":

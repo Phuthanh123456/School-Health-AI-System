@@ -11,6 +11,7 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.schema import CreateSchema, DropSchema
 
 from app.database import Base, engine as application_engine, get_db
+from app.api.guards import AuthenticatedUser, get_current_user
 from app.main import app
 from app.models.student import HealthProfile, Student, accounts, checkup_sessions, parent_students, checkup_results, student_nurses
 
@@ -23,7 +24,7 @@ def client():
         schema = "student_id_test_" + uuid4().hex
         engine = create_engine(
             application_engine.url,
-            execution_options={"schema_translate_map": {"public": schema}},
+            execution_options={"schema_translate_map": {"schoolhealth_demo": schema}},
         )
         with engine.begin() as connection:
             connection.execute(CreateSchema(schema))
@@ -32,7 +33,7 @@ def client():
             "sqlite://",
             connect_args={"check_same_thread": False},
             poolclass=StaticPool,
-            execution_options={"schema_translate_map": {"public": None}},
+            execution_options={"schema_translate_map": {"schoolhealth_demo": None}},
         )
 
     tables = [accounts, Student.__table__, HealthProfile.__table__, checkup_sessions, parent_students, checkup_results, student_nurses]
@@ -53,11 +54,13 @@ def client():
             yield db
 
     app.dependency_overrides[get_db] = test_db
+    app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(id="nurse", role="nurse")
     try:
         with TestClient(app) as client:
             yield client
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
         if schema:
             with engine.begin() as connection:
                 connection.execute(DropSchema(schema, cascade=True))
@@ -194,6 +197,14 @@ def test_csv_import_is_repeatable_and_preserves_edits(client, monkeypatch):
     db = next(database)
     try:
         monkeypatch.setattr(seed_demo, "engine", db.get_bind())
+        db.add(Student(id="DEMO-001", full_name="Legacy demo name", class_name="6A1"))
+        db.add(HealthProfile(
+            student_id="DEMO-001", allergies="Legacy allergy", medical_notes="Legacy note",
+        ))
+        db.execute(checkup_results.insert().values(
+            session_id="session", student_id="DEMO-001", status="completed", height_cm=130.0,
+        ))
+        db.commit()
     finally:
         database.close()
     folder = Path(seed_demo.__file__).resolve().parent.parent / "data"
@@ -202,6 +213,15 @@ def test_csv_import_is_repeatable_and_preserves_edits(client, monkeypatch):
     assert len({student["parentid"] for student in roster}) == 24
     assert client.get("/students/DEMO001").json()["parentid"] == "PARENT001"
     assert client.get("/students/DEMO024").json()["parentid"] == "PARENT024"
+    migrated = client.get("/students/DEMO001").json()
+    assert migrated["full_name"] == "Legacy demo name"
+    assert migrated["allergies"] == "Legacy allergy"
+    assert client.get("/students/DEMO-001").status_code == 404
+    migrated_result = next(
+        row for row in client.get("/checkup-sessions/session/results").json()
+        if row["id"] == "DEMO001"
+    )
+    assert migrated_result["height_cm"] == 130.0
     response = client.patch("/students/DEMO001", json={
         "medical_notes": "Preserved edit", "parentid": "parent2",
     })
