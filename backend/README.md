@@ -75,8 +75,8 @@ The seed writes to the application's PostgreSQL `public` schema.
 `id`, `full_name`, and `class_name` as nonblank strings. You can also send
 `allergies` and `medical_notes`. The API returns HTTP 201 on success, 409 if the
 student ID already exists, and 422 if the request fails validation.
-New student IDs must contain 1–50 ASCII letters, digits, hyphens, or underscores
-(`A-Z`, `a-z`, `0-9`, `-`, `_`). The creation form enforces the same format.
+New student IDs must contain 1–50 ASCII letters and digits
+(`A-Z`, `a-z`, `0-9`). The creation form enforces the same format.
 `GET /students/{student_id}` returns the student's basic profile.
 `PATCH /students/{student_id}` accepts changes to `full_name`, `class_name`,
 `allergies`, and `medical_notes`. Omitted fields keep their values. Send

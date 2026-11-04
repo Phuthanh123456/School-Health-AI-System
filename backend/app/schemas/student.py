@@ -7,7 +7,7 @@ StudentName = Annotated[str, StringConstraints(min_length=1, max_length=200)]
 ClassName = Annotated[str, StringConstraints(min_length=1, max_length=50)]
 HealthText = Annotated[str, StringConstraints(max_length=2000)]
 StudentId = Annotated[str, StringConstraints(
-    min_length=1, max_length=50, pattern=r"^[A-Za-z0-9_-]+$"
+    min_length=1, max_length=50, pattern=r"^[A-Za-z0-9]+$"
 )]
 
 

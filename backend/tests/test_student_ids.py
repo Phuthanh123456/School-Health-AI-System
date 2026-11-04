@@ -52,7 +52,7 @@ def client():
         engine.dispose()
 
 
-@pytest.mark.parametrize("student_id", ["DEMO-025", "demo_026", "025", "A"])
+@pytest.mark.parametrize("student_id", ["DEMO025", "demo026", "025", "A"])
 def test_accepted_id_can_be_created_read_and_updated(client, student_id):
     payload = {"id": student_id, "full_name": "Synthetic Student", "class_name": "6A1"}
     created = client.post("/students", json=payload)
@@ -65,7 +65,7 @@ def test_accepted_id_can_be_created_read_and_updated(client, student_id):
 
 
 @pytest.mark.parametrize("student_id", [
-    "DEMO/025", "DEMO%2F025", "DEMO?025", "DEMO#025", "DEMO 025",
+    "DEMO-025", "demo_026", "DEMO/025", "DEMO%2F025", "DEMO?025", "DEMO#025", "DEMO 025",
     "DEMO\\025", ".", "ĐEMO-025", "A" * 51,
 ])
 def test_unsafe_id_is_rejected_without_creating_a_student(client, student_id):
@@ -84,40 +84,54 @@ def test_unsafe_id_is_rejected_without_creating_a_student(client, student_id):
 ])
 def test_invalid_create_and_update_preserve_data(client, changes):
     original = {
-        "id": "QA-VALIDATION", "full_name": "Synthetic Student", "class_name": "6A1",
+        "id": "QAVALIDATION", "full_name": "Synthetic Student", "class_name": "6A1",
         "allergies": "Peanuts", "medical_notes": "Original",
     }
     invalid_create = client.post("/students", json={**original, **changes})
     assert invalid_create.status_code == 422, invalid_create.text
     assert client.get("/students").json() == []
     assert client.post("/students", json=original).status_code == 201
-    invalid_update = client.patch("/students/QA-VALIDATION", json=changes)
+    invalid_update = client.patch("/students/QAVALIDATION", json=changes)
     assert invalid_update.status_code == 422, invalid_update.text
-    assert client.get("/students/QA-VALIDATION").json() == original
+    assert client.get("/students/QAVALIDATION").json() == original
 
 
 def test_duplicate_and_partial_updates_preserve_other_fields(client):
     original = {
-        "id": "QA-PARTIAL", "full_name": "Synthetic Student", "class_name": "6A1",
+        "id": "QAPARTIAL", "full_name": "Synthetic Student", "class_name": "6A1",
         "allergies": "Peanuts", "medical_notes": "Original",
     }
     assert client.post("/students", json=original).status_code == 201
     assert client.post("/students", json={**original, "full_name": "Duplicate"}).status_code == 409
-    assert client.get("/students/QA-PARTIAL").json() == original
-    assert client.patch("/students/QA-PARTIAL", json={"class_name": "6A2"}).status_code == 200
+    assert client.get("/students/QAPARTIAL").json() == original
+    assert client.patch("/students/QAPARTIAL", json={"class_name": "6A2"}).status_code == 200
     expected = {**original, "class_name": "6A2"}
-    assert client.get("/students/QA-PARTIAL").json() == expected
-    assert client.patch("/students/QA-PARTIAL", json={}).json() == expected
-    assert client.patch("/students/QA-PARTIAL", json={"allergies": "", "medical_notes": None}).status_code == 200
-    assert client.get("/students/QA-PARTIAL").json() == {**expected, "allergies": None, "medical_notes": None}
+    assert client.get("/students/QAPARTIAL").json() == expected
+    assert client.patch("/students/QAPARTIAL", json={}).json() == expected
+    assert client.patch("/students/QAPARTIAL", json={"allergies": "", "medical_notes": None}).status_code == 200
+    assert client.get("/students/QAPARTIAL").json() == {**expected, "allergies": None, "medical_notes": None}
 
 
 def test_missing_student_and_immutable_id(client):
-    assert client.get("/students/QA-MISSING").status_code == 404
-    assert client.patch("/students/QA-MISSING", json={"medical_notes": "Test"}).status_code == 404
+    assert client.get("/students/QAMISSING").status_code == 404
+    assert client.patch("/students/QAMISSING", json={"medical_notes": "Test"}).status_code == 404
     assert client.post("/students", json={
-        "id": "QA-ORIGINAL", "full_name": "Synthetic Student", "class_name": "6A1",
+        "id": "QAORIGINAL", "full_name": "Synthetic Student", "class_name": "6A1",
     }).status_code == 201
-    assert client.patch("/students/QA-ORIGINAL", json={"id": "QA-NEW"}).status_code == 422
-    assert client.get("/students/QA-ORIGINAL").status_code == 200
-    assert client.get("/students/QA-NEW").status_code == 404
+    assert client.patch("/students/QAORIGINAL", json={"id": "QANEW"}).status_code == 422
+    assert client.get("/students/QAORIGINAL").status_code == 200
+    assert client.get("/students/QANEW").status_code == 404
+
+
+def test_existing_demo_id_remains_readable_and_editable(client):
+    database = app.dependency_overrides[get_db]()
+    db = next(database)
+    try:
+        db.add(Student(id="DEMO-001", full_name="Synthetic Student", class_name="6A1"))
+        db.commit()
+    finally:
+        database.close()
+    assert client.get("/students/DEMO-001").status_code == 200
+    response = client.patch("/students/DEMO-001", json={"medical_notes": "Updated"})
+    assert response.status_code == 200, response.text
+    assert client.get("/students/DEMO-001").json()["medical_notes"] == "Updated"
