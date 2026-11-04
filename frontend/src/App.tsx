@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import AdminDashboard from './AdminDashboard'
 import LoginPage from './LoginPage'
 import NurseStudents from './NurseStudents'
 import { NurseCheckupEntry } from './NurseCheckupEntry'
@@ -51,6 +52,7 @@ const roleLandingContent: Record<Exclude<UserRole, 'nurse'>, { title: string; de
 }
 
 function RoleLandingPage({ role }: { role: Exclude<UserRole, 'nurse'> }) {
+  if (role === 'admin') return <AdminDashboard />
   const content = roleLandingContent[role]
 
   function handleSignOut() {
