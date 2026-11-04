@@ -65,8 +65,12 @@ no measurements so dashboards can distinguish them from completed screenings.
 
 The initial accounts share the demo password supplied on the first run and store
 bcrypt hashes through PostgreSQL's `pgcrypto` extension. The parent is linked
-to students `DEMO-001` and `DEMO-017`. Rerunning the seed fills in missing demo
+to students `DEMO001` and `DEMO017`. Rerunning the seed fills in missing demo
 rows and preserves existing rows, including profile edits and password hashes.
+The seed also renames the original student IDs `DEMO-001` through `DEMO-024`
+to `DEMO001` through `DEMO024` in one transaction, preserving profiles,
+parent links, and checkup results. If both forms of an ID already exist,
+the transaction stops for manual collision resolution.
 
 The seed writes to the application's PostgreSQL `public` schema.
 `GET /students` reads `public.students` and returns each student's `id`,
