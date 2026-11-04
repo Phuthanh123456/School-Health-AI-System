@@ -24,7 +24,7 @@ test.beforeEach(async ({ page }) => {
       json: { id: 'admin', email: 'admin@schoolhealth.example', role: 'admin' },
     })
   })
-  await page.goto('/admin')
+  await page.goto('/admin/insights')
   await page.getByLabel('Thông tin truy cập quản trị (môi trường phát triển)').fill('test-admin')
 })
 

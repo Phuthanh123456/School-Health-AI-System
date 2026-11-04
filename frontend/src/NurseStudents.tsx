@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { getAccessToken } from './auth'
 
 type Student = { id: string; full_name: string; class_name: string }
 type Profile = Student & { allergies: string | null; medical_notes: string | null }
@@ -9,7 +10,11 @@ const inputStyle = 'mt-1 w-full rounded-lg border border-border bg-white px-3 py
 const buttonStyle = 'rounded-lg bg-primary-strong px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${api}/students${path}`, options)
+  const headers = new Headers(options?.headers)
+  const token = getAccessToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  const response = await fetch(`${api}/students${path}`, { ...options, headers })
+  if (response.status === 401 || response.status === 403) throw new Error('Sign in with a Nurse or Admin account to access student profiles.')
   if (response.status === 409) throw new Error('Mã học sinh đã tồn tại.')
   if (response.status === 422) throw new Error('Kiểm tra các trường bắt buộc và độ dài thông tin.')
   if (response.status === 404) throw new Error('Không tìm thấy hồ sơ học sinh.')
