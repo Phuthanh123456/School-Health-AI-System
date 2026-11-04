@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { calculateBmi, formatBmi } from './checkupMath.js'
 import CheckupSessionsPage from './pages/CheckupSessionsPage'
+import { getAccessToken, signOut } from './auth'
 
 type Session = { id: string; title: string; checkup_date: string; class_name: string | null; participant_count: number }
 type Student = { id: string; student_code: string; full_name: string; class_name: string }
@@ -65,8 +66,6 @@ export function NurseCheckupEntry({
   onSelectSession: (sessionId: string | null) => void
   onContinueToResults: (sessionId: string) => void
 }) {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
   const [authorization, setAuthorization] = useState('')
   const [sessions, setSessions] = useState<Session[]>([])
   const [sessionId, setSessionId] = useState('')
@@ -100,6 +99,38 @@ export function NurseCheckupEntry({
     editableResultKeyRef.current = ''
     resultAbortRef.current?.abort()
     rosterAbortRef.current?.abort()
+  }, [])
+
+  useEffect(() => {
+    const accessToken = getAccessToken()
+    if (!accessToken) {
+      setError('Your Nurse session has expired. Sign in again to continue.')
+      signOut()
+      window.location.assign('/login')
+      return
+    }
+
+    const controller = new AbortController()
+    const bearer = `Bearer ${accessToken}`
+    setAuthorization(bearer)
+    setBusy(true)
+    setError('')
+    fetch(`${API_BASE}/checkups/sessions`, { headers: { Authorization: bearer }, signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await responseError(response))
+        const nextSessions = await response.json() as Session[]
+        if (!controller.signal.aborted) {
+          setSessions(nextSessions)
+          setMessage('Checkup sessions are ready.')
+        }
+      })
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(reason instanceof Error ? reason.message : 'Could not load checkup sessions.')
+        }
+      })
+      .finally(() => { if (!controller.signal.aborted) setBusy(false) })
+    return () => controller.abort()
   }, [])
 
   useEffect(() => {
@@ -166,28 +197,6 @@ export function NurseCheckupEntry({
     setResultLoadState('idle')
     setError('')
     setMessage('')
-  }
-
-  async function connect(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setBusy(true)
-    setError('')
-    setMessage('')
-    const credentialBytes = new TextEncoder().encode(`${username}:${password}`)
-    const credentialBinary = Array.from(credentialBytes, (byte) => String.fromCharCode(byte)).join('')
-    const token = `Basic ${btoa(credentialBinary)}`
-    try {
-      const response = await fetch(`${API_BASE}/checkups/sessions`, { headers: { Authorization: token } })
-      if (!response.ok) throw new Error(await responseError(response))
-      setSessions(await response.json() as Session[])
-      setAuthorization(token)
-      setPassword('')
-      setMessage('Đã xác thực tài khoản Nurse.')
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Không thể kết nối API.')
-    } finally {
-      setBusy(false)
-    }
   }
 
   if (authorization && route.kind === 'checkup-sessions') {
@@ -346,15 +355,7 @@ export function NurseCheckupEntry({
         </header>
 
         {!authorization ? (
-          <form onSubmit={connect} className="grid gap-4 rounded-3xl border border-border bg-white p-6 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-            <label className="grid gap-1 text-sm font-semibold">Tài khoản Nurse
-              <input required value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" className="rounded-xl border border-border px-3 py-2.5 font-normal" />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold">Mật khẩu
-              <input required type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" className="rounded-xl border border-border px-3 py-2.5 font-normal" />
-            </label>
-            <button disabled={busy} className="min-h-11 rounded-xl bg-primary px-5 font-semibold text-white disabled:opacity-60">{busy ? 'Đang xác thực…' : 'Kết nối'}</button>
-          </form>
+          <p role="status" className="rounded-3xl border border-border bg-white p-6 text-sm text-muted">Loading your Nurse session…</p>
         ) : (
           <>
             <section className="mb-4 rounded-3xl border border-border bg-white p-6">

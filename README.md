@@ -2,7 +2,7 @@
 
 SchoolHealth is a web-based school health management platform for students, families, and school health teams. It is designed to keep student health records organized, make checkup results easier to follow, and support coordinated care over time.
 
-> **Project status:** Development demo. Login, role-specific screens, student profiles, checkup sessions/results, synthetic demo data, and the Admin school health overview are available. Some integrations still require local configuration.
+> **Project status:** Development demo. Login, role-specific screens, student profiles, checkup sessions/results, demo data, and an AI insights preview are available. Some integrations still require local configuration.
 
 ## Product goals
 
@@ -92,29 +92,27 @@ Open `http://localhost:5174`. Demo accounts use the same password from `SCHOOLHE
 | --- | --- |
 | Admin | `admin@schoolhealth.example` |
 | Nurse | `nurse@schoolhealth.example` |
-| Parent | `parent@schoolhealth.example` |
+| Parent (multiple-child demo) | `parent@schoolhealth.example` |
+| Dedicated Parent | `parent001@schoolhealth.example` (through parent024) |
+| Dedicated Nurse | `nurse001@schoolhealth.example`, `nurse002@schoolhealth.example` |
 
-The database is reachable by Compose services at `db:5432`; the API is available on `http://localhost:8001`. PostgreSQL data stays in the named Compose volume.
-
-### School health overview dashboard (US-5.2)
-
-Sign in with an Admin account and open `http://localhost:5174/admin`. The page reads school-level aggregates from `GET /api/admin/dashboard`; the endpoint requires an Admin JWT and returns no student-level details.
-
-Metric definitions:
-
-- **Students:** distinct students in the dataset.
-- **Completed checkups:** saved result records, counted once per student/session pair. The same student can contribute one record for each session.
-- **Status distribution:** stored Nurse-selected `Normal` and `Needs Follow-up` values. Pending and absent participation rows are not counted as completed checkups.
-- Free-text notes are not used to infer issue categories. The current schema has no structured vision or dental issue fields. Class/session filters are not part of this story, so all dashboard values use the same school-wide dataset.
-
-The previous AI insights API prototype is documented in [US-6.1](docs/US-6.1.md); it is not currently part of the US-5.2 dashboard.
+The database is reachable by Compose services at `db:5432`; the API is available on `http://localhost:8001`. PostgreSQL data stays in the named Compose volume. For AI-generated insights, configure `LLM_API_KEY` and `INSIGHTS_ADMIN_TOKEN` in `.env`, then restart with `docker compose up -d --force-recreate api`.
 
 ## Testing and CI
+
+### Parent and Admin workspaces (SCRUM-51 / SCRUM-52)
+
+After login, Parents open `/parent` to view their own profile and linked children's health information. Admins open `/admin` to filter student health records by Class, Parent and Nurse, paginate results, and assign or remove Parent/Nurse links. The School filter was removed from this scope. See [API contracts, data rules, demo accounts and acceptance checks](docs/SCRUM-51-52.md).
+
+The US-5.2 database-backed school overview is available to Admins at `/admin/overview`. It shows distinct students, saved student/session checkup records, Nurse-selected status counts and a status distribution chart. The status table and cards use the same optional metrics from the seeded dataset; no diagnosis is inferred from free-text notes.
+
+The seed now imports Zen's fictional CSVs into the shared `schoolhealth_demo` schema. It preserves saved edits and explicit Admin assignment removals when re-run. The historical AI preview remains at `/admin/insights`; its server-side provider configuration and temporary credential gate are documented in [US-6.1](docs/US-6.1.md).
 
 The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on pushes, pull requests, and manual dispatch. It:
 
 - Install backend dependencies from `backend/requirements.txt` and run pytest tests in `backend/tests/`.
-- Install frontend dependencies with `npm ci`, then run the `lint`, `typecheck`, and `build` scripts defined in `frontend/package.json`.
+- Install frontend dependencies with `npm ci`, then run lint, typecheck, build, unit tests and browser specs.
+- Run Parent/Admin integration against a disposable PostgreSQL schema, including concurrent writes and seed preservation.
 - Install Chromium and run Playwright tests when configured test files are present.
 
 Run the corresponding checks locally:

@@ -6,11 +6,13 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.api.guards import require_role
+from app.models.management import student_nurses
 from app.models.student import HealthProfile, Student, checkup_results, parent_students
 from app.schemas.student import StudentCreate, StudentProfile, StudentSummary, StudentUpdate
 
 
-router = APIRouter(prefix="/students", tags=["students"])
+router = APIRouter(prefix="/students", tags=["students"], dependencies=[Depends(require_role("nurse", "admin"))])
 
 
 def read_profile(db: Session, student_id: str) -> StudentProfile:
@@ -104,6 +106,7 @@ def delete_student(student_id: str, db: Annotated[Session, Depends(get_db)]) -> 
             raise HTTPException(status_code=404, detail="Student not found")
         db.execute(delete(checkup_results).where(checkup_results.c.student_id == student_id))
         db.execute(delete(parent_students).where(parent_students.c.student_id == student_id))
+        db.execute(delete(student_nurses).where(student_nurses.c.student_id == student_id))
         db.execute(delete(HealthProfile).where(HealthProfile.student_id == student_id))
         db.delete(student)
     return Response(status_code=204)

@@ -40,21 +40,18 @@ services:
       retries: 12
 
   seed:
-    image: postgres:17
+    build: ./backend
     restart: "no"
     depends_on:
       db:
         condition: service_healthy
     environment:
-      PGHOST: db
-      PGDATABASE: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
-      PGUSER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
-      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       SCHOOLHEALTH_DEMO_PASSWORD: ${SCHOOLHEALTH_DEMO_PASSWORD:?Set SCHOOLHEALTH_DEMO_PASSWORD in .env}
-    volumes:
-      - ./backend/scripts/seed_demo.sql:/seed_demo.sql:ro
-    entrypoint: ["/bin/sh", "-c"]
-    command: ["exec psql -X -v ON_ERROR_STOP=1 -f /seed_demo.sql"]
+    command: ["python", "-m", "app.seed_demo"]
 
   frontend:
     build:

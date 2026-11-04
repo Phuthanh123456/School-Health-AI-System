@@ -40,9 +40,6 @@ async function login() {
       onContinueToResults={() => undefined}
     />,
   )
-  fireEvent.change(screen.getByLabelText('Tài khoản Nurse'), { target: { value: 'nurse' } })
-  fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'password' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Kết nối' }))
   await screen.findByRole('button', { name: /Alex Student/ })
   await screen.findByRole('button', { name: /Blair Student/ })
 }
@@ -62,6 +59,7 @@ function resultFor(studentId: string, height = 150, weight = 40.1) {
 
 describe('Nurse checkup result selection', () => {
   beforeEach(() => {
+    sessionStorage.setItem('schoolhealth.auth-session', JSON.stringify({ accessToken: 'nurse-token', expiresAt: Date.now() + 60_000 }))
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url.endsWith('/checkups/sessions')) return jsonResponse([session])
@@ -123,10 +121,6 @@ describe('Nurse checkup result selection', () => {
         onContinueToResults={() => undefined}
       />,
     )
-    fireEvent.change(document.querySelector('input[autocomplete="username"]')!, { target: { value: 'nurse' } })
-    fireEvent.change(document.querySelector('input[autocomplete="current-password"]')!, { target: { value: 'password' } })
-    fireEvent.click(document.querySelector('form button')!)
-
     await screen.findByRole('combobox')
     const sessionSelect = document.querySelector('select')!
     fireEvent.change(sessionSelect, { target: { value: 'SESSION-A' } })

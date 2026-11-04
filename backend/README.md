@@ -38,54 +38,46 @@ python -m pytest
 
 The basic endpoint tests use FastAPI's test client and never connect to PostgreSQL.
 
-## Seed TASK-01 demo data
+## Seed fictional CSV demo data
 
-From the repository root, configure the local Compose `.env` and start PostgreSQL
-with `docker compose up -d --wait db`. In PowerShell, set
-`$env:SCHOOLHEALTH_DEMO_PASSWORD` to a demo-only password of at least eight
-characters and at most 72 UTF-8 bytes. Set `$OutputEncoding = [Text.UTF8Encoding]::new($false)`
-to preserve Vietnamese names when piping SQL.
-
-Run the seed with one command:
+From the repository root, configure `.env` from `.env.example`, including the PostgreSQL values, `AUTH_TOKEN_SECRET` and `SCHOOLHEALTH_DEMO_PASSWORD` (8?72 UTF-8 bytes). Start the full demo with:
 
 ```powershell
-Get-Content -Raw -Encoding UTF8 backend/scripts/seed_demo.sql | docker compose exec -T -e SCHOOLHEALTH_DEMO_PASSWORD db sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+docker compose up -d --build api frontend
 ```
 
-The script creates 24 fictional students in class 6A1,
-24 health profiles, two checkup sessions, and 48 result rows. Results include
-completed, follow-up, pending, and absent statuses. Pending and absent rows have
-no measurements so dashboards can distinguish them from completed screenings.
+The Compose `seed` service runs `python -m app.seed_demo`, importing Zen's four fictional CSV files from `backend/data/` into the shared `schoolhealth_demo` schema. It creates 24 students, their health profiles, two checkup sessions and 48 participation/result rows; pending and absent rows have no measurements. Existing data and passwords are preserved. The CSV's dedicated Parent/Nurse IDs are used directly. The existing shared demo Parent/Nurse logins remain available for compatibility.
 
-| Role | Demo account |
-| --- | --- |
-| Admin | `admin@schoolhealth.example` |
-| Nurse | `nurse@schoolhealth.example` |
-| Parent | `parent@schoolhealth.example` |
+The import creates the supporting `student_nurses` and `assignment_audit` tables and lookup indexes. Admin link changes and removals survive reseeding. To explicitly re-import after editing CSV files:
 
-The initial accounts share the demo password supplied on the first run and store
-bcrypt hashes through PostgreSQL's `pgcrypto` extension. The parent is linked
-to students `DEMO001` and `DEMO017`. Rerunning the seed fills in missing demo
-rows and preserves existing rows, including profile edits and password hashes.
-The seed also renames the original student IDs `DEMO-001` through `DEMO-024`
-to `DEMO001` through `DEMO024` in one transaction, preserving profiles,
-parent links, and checkup results. If both forms of an ID already exist,
-the transaction stops for manual collision resolution.
+```powershell
+docker compose build seed
+docker compose run --rm seed
+```
 
-The tables live in the `schoolhealth_demo` schema. The seed provides data for the Nurse session selector and result-entry flow, as well as the parent and dashboard stories. The selector uses the same seeded sessions and participant rows as the result-entry API. This is the canonical Student table for both US-4.1 and US-4.2; profile models must map to it to avoid a second student population. See [`docs/checkup-sessions-api.md`](docs/checkup-sessions-api.md) for the API contract and stable demo IDs, and [`docs/data-schema.md`](docs/data-schema.md) for the shared student data contract.
+In a local Python environment with a configured database and `SCHOOLHEALTH_DEMO_PASSWORD`, run `python -m app.seed_demo` from `backend` instead. Compose and local development invoke the same importer.
+
+The historical `scripts/seed_demo.sql` is retained for reference; Compose no longer invokes it. Current CSV IDs are DEMO001 through DEMO024. Existing installations that still use legacy hyphenated DEMO-001 IDs need the legacy ID migration before CSV import to avoid creating a second demo population.
+
+See [SCRUM-51/52 accounts, API contracts, security and demo checks](../docs/SCRUM-51-52.md), [checkup session endpoints](docs/checkup-sessions-api.md), and [the shared schema contract](docs/data-schema.md).
+
+## US-5.2 Admin school overview
+
+Admins can read the school-wide aggregate at `GET /api/admin/dashboard` using a valid Admin Bearer token. The response includes distinct student count, saved checkup record count, and Normal/Needs Follow-up counts. The endpoint does not expose student-level records or classify free-text notes. The matching Admin view is `/admin/overview`.
 
 ## Nurse checkup session selection and result entry
 
 The checkup API uses the seeded `schoolhealth_demo` tables. Apply
 `backend/scripts/migrate_checkup_results.sql` to an existing seeded database
 before starting the updated API. Fresh demo databases receive the same columns
-from `backend/scripts/seed_demo.sql`. The migration adds BMI, vision, and audit
+from the ORM schema used by `python -m app.seed_demo`. The migration adds BMI, vision, and audit
 timestamps while retaining existing demo statuses. The composite primary key
 `(session_id, student_id)` ensures one result per participating student/session.
 
-Checkup routes use HTTP Basic credentials checked against the seeded accounts;
-use the Nurse account and demo password configured when the database was
-seeded. Available routes are:
+Checkup routes accept the Bearer token issued by `/auth/login`; the Nurse
+workspace reuses the signed-in session and loads sessions automatically. HTTP
+Basic credentials remain supported for existing API clients. The current
+account role is checked against the database on every request. Available routes are:
 
 - `GET /checkups/sessions` ? predefined sessions with class and participant count
 - `GET /checkups/sessions/{session_id}` ? one session with its participating students
@@ -104,8 +96,8 @@ or schedule sessions.
 Example save request:
 
 ```http
-PUT /checkups/sessions/DEMO-CURRENT/students/DEMO-001/result
-Authorization: Basic <nurse credentials>
+PUT /checkups/sessions/DEMO-CURRENT/students/DEMO001/result
+Authorization: Bearer <access token from /auth/login>
 Content-Type: application/json
 
 {
@@ -124,4 +116,4 @@ The frontend uses `VITE_API_BASE_URL` when set and otherwise calls
 
 Build the API image from this directory with `docker build -t schoolhealth-api .`. The image starts Uvicorn on port 8000 and is ready to be referenced as the API service's `build` context in the project Docker Compose configuration. Pass `DATABASE_URL` and, if needed, `CORS_ORIGINS` to that service through its environment.
 
-Dev A should provide the PostgreSQL hostname/service name reachable from the API container, port, database name, username, password, and any required SSL options. The API reads the resulting connection string only from `DATABASE_URL`; it does not create the database or a PostgreSQL container.
+Dev A should provide the PostgreSQL hostname/service name reachable from the API container, port, database name, username, password, and any required SSL options. The API accepts `DATABASE_URL` or the documented `POSTGRES_*` settings. The root Compose file provisions PostgreSQL and runs the CSV seed service before starting the API.

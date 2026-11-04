@@ -10,6 +10,8 @@ from sqlalchemy.schema import CreateSchema, DropSchema
 
 from app.database import Base, engine as application_engine, get_db
 from app.main import app
+from app.api.guards import AuthenticatedUser, get_current_user
+from app.models.management import student_nurses
 from app.models.student import HealthProfile, Student, parent_students, checkup_results
 
 
@@ -33,7 +35,7 @@ def client():
             execution_options={"schema_translate_map": {"schoolhealth_demo": None}},
         )
 
-    tables = [Student.__table__, HealthProfile.__table__, parent_students, checkup_results]
+    tables = [Student.__table__, HealthProfile.__table__, parent_students, checkup_results, student_nurses]
     Base.metadata.create_all(engine, tables=tables)
 
     def test_db():
@@ -41,11 +43,13 @@ def client():
             yield db
 
     app.dependency_overrides[get_db] = test_db
+    app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(id="nurse", role="nurse")
     try:
         with TestClient(app) as client:
             yield client
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
         if schema:
             with engine.begin() as connection:
                 connection.execute(DropSchema(schema, cascade=True))
