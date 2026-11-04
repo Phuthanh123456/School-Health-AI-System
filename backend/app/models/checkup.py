@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Index, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -37,6 +37,7 @@ class CheckupResult(Base):
         CheckConstraint("height_cm IS NULL OR height_cm > 0", name="ck_result_height_positive"),
         CheckConstraint("weight_kg IS NULL OR weight_kg > 0", name="ck_result_weight_positive"),
         CheckConstraint("bmi IS NULL OR bmi > 0", name="ck_result_bmi_positive"),
+        Index("ix_result_student_session", "student_id", "session_id"),
         {"schema": "schoolhealth_demo", "extend_existing": True},
     )
 

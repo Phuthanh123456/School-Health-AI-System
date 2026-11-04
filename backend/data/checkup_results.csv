@@ -1,0 +1,49 @@
+﻿session_id,student_id,status,height_cm,weight_kg,notes
+DEMO-BASELINE,DEMO001,follow_up,151.0,39.0,Confirm the allergy note with the parent.
+DEMO-BASELINE,DEMO002,completed,140.0,46.0,
+DEMO-BASELINE,DEMO003,completed,153.0,53.0,
+DEMO-BASELINE,DEMO004,completed,142.0,38.0,
+DEMO-BASELINE,DEMO005,follow_up,155.0,45.0,Repeat the vision screening with glasses.
+DEMO-BASELINE,DEMO006,completed,144.0,52.0,
+DEMO-BASELINE,DEMO007,completed,157.0,37.0,
+DEMO-BASELINE,DEMO008,absent,,,Student was absent on the checkup date.
+DEMO-BASELINE,DEMO009,completed,159.0,51.0,
+DEMO-BASELINE,DEMO010,completed,148.0,36.0,
+DEMO-BASELINE,DEMO011,completed,161.0,43.0,
+DEMO-BASELINE,DEMO012,completed,150.0,50.0,
+DEMO-BASELINE,DEMO013,completed,139.0,35.0,
+DEMO-BASELINE,DEMO014,follow_up,152.0,42.0,Schedule a repeat vision screening.
+DEMO-BASELINE,DEMO015,completed,141.0,49.0,
+DEMO-BASELINE,DEMO016,completed,154.0,34.0,
+DEMO-BASELINE,DEMO017,completed,143.0,41.0,
+DEMO-BASELINE,DEMO018,completed,156.0,48.0,
+DEMO-BASELINE,DEMO019,completed,145.0,33.0,
+DEMO-BASELINE,DEMO020,completed,158.0,40.0,
+DEMO-BASELINE,DEMO021,follow_up,147.0,47.0,Ask the family to confirm the follow-up appointment.
+DEMO-BASELINE,DEMO022,completed,160.0,32.0,
+DEMO-BASELINE,DEMO023,completed,149.0,39.0,
+DEMO-BASELINE,DEMO024,absent,,,Student was absent on the checkup date.
+DEMO-CURRENT,DEMO001,follow_up,151.8,39.5,Confirm the allergy note with the parent.
+DEMO-CURRENT,DEMO002,completed,140.8,46.5,
+DEMO-CURRENT,DEMO003,pending,,,
+DEMO-CURRENT,DEMO004,completed,142.8,38.5,
+DEMO-CURRENT,DEMO005,follow_up,155.8,45.5,Repeat the vision screening with glasses.
+DEMO-CURRENT,DEMO006,completed,144.8,52.5,
+DEMO-CURRENT,DEMO007,completed,157.8,37.5,
+DEMO-CURRENT,DEMO008,absent,,,Student was absent on the checkup date.
+DEMO-CURRENT,DEMO009,completed,159.8,51.5,
+DEMO-CURRENT,DEMO010,pending,,,
+DEMO-CURRENT,DEMO011,completed,161.8,43.5,
+DEMO-CURRENT,DEMO012,completed,150.8,50.5,
+DEMO-CURRENT,DEMO013,completed,139.8,35.5,
+DEMO-CURRENT,DEMO014,follow_up,152.8,42.5,Schedule a repeat vision screening.
+DEMO-CURRENT,DEMO015,completed,141.8,49.5,
+DEMO-CURRENT,DEMO016,completed,154.8,34.5,
+DEMO-CURRENT,DEMO017,completed,143.8,41.5,
+DEMO-CURRENT,DEMO018,completed,156.8,48.5,
+DEMO-CURRENT,DEMO019,pending,,,
+DEMO-CURRENT,DEMO020,completed,158.8,40.5,
+DEMO-CURRENT,DEMO021,follow_up,147.8,47.5,Ask the family to confirm the follow-up appointment.
+DEMO-CURRENT,DEMO022,completed,160.8,32.5,
+DEMO-CURRENT,DEMO023,completed,149.8,39.5,
+DEMO-CURRENT,DEMO024,absent,,,Student was absent on the checkup date.

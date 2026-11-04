@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Table, Text
+from sqlalchemy import Column, ForeignKey, Index, Table, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -6,7 +6,7 @@ from app.database import Base
 
 class Student(Base):
     __tablename__ = "students"
-    __table_args__ = {"schema": "schoolhealth_demo"}
+    __table_args__ = (Index("ix_students_class_name", "class_name"), {"schema": "schoolhealth_demo"})
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     full_name: Mapped[str] = mapped_column(Text)
@@ -29,6 +29,7 @@ parent_students = Table(
     "parent_students", Base.metadata,
     Column("parent_id", Text, primary_key=True),
     Column("student_id", Text, ForeignKey("schoolhealth_demo.students.id"), primary_key=True),
+    Index("ix_parent_students_student", "student_id"),
     schema="schoolhealth_demo",
 )
 checkup_results = Table(
