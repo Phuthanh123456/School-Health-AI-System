@@ -65,8 +65,12 @@ no measurements so dashboards can distinguish them from completed screenings.
 
 The initial accounts share the demo password supplied on the first run and store
 bcrypt hashes through PostgreSQL's `pgcrypto` extension. The parent is linked
-to students `DEMO-001` and `DEMO-017`. Rerunning the seed fills in missing demo
+to students `DEMO001` and `DEMO017`. Rerunning the seed fills in missing demo
 rows and preserves existing rows, including profile edits and password hashes.
+The seed also renames the original student IDs `DEMO-001` through `DEMO-024`
+to `DEMO001` through `DEMO024` in one transaction, preserving profiles,
+parent links, and checkup results. If both forms of an ID already exist,
+the transaction stops for manual collision resolution.
 
 The tables live in the `schoolhealth_demo` schema. The seed provides data for the Nurse session selector and result-entry flow, as well as the parent and dashboard stories. The selector uses the same seeded sessions and participant rows as the result-entry API. This is the canonical Student table for both US-4.1 and US-4.2; profile models must map to it to avoid a second student population. See [`docs/checkup-sessions-api.md`](docs/checkup-sessions-api.md) for the API contract and stable demo IDs, and [`docs/data-schema.md`](docs/data-schema.md) for the shared student data contract.
 

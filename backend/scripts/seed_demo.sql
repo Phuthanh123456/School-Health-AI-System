@@ -71,8 +71,37 @@ ALTER TABLE checkup_results DROP CONSTRAINT IF EXISTS checkup_results_status_che
 ALTER TABLE checkup_results ADD CONSTRAINT checkup_results_status_check
     CHECK (status IN ('completed', 'follow_up', 'pending', 'absent', 'Normal', 'Needs Follow-up'));
 
+-- Rename the original demo student IDs while preserving profile edits and links.
+LOCK TABLE students, health_profiles, parent_students, checkup_results
+    IN SHARE ROW EXCLUSIVE MODE;
+CREATE TEMP TABLE demo_student_id_map ON COMMIT DROP AS
+SELECT id AS old_id, replace(id, '-', '') AS new_id
+FROM students
+WHERE id IN (
+    SELECT 'DEMO-' || lpad(n::text, 3, '0') FROM generate_series(1, 24) AS ids(n)
+);
+
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM demo_student_id_map m JOIN students s ON s.id = m.new_id
+    ) THEN
+        RAISE EXCEPTION 'Both old and new demo student IDs exist. Resolve the collision before seeding.';
+    END IF;
+END $$;
+
 INSERT INTO students (id, full_name, class_name)
-SELECT 'DEMO-' || lpad(position::text, 3, '0'), full_name, '6A1'
+SELECT m.new_id, s.full_name, s.class_name
+FROM students s JOIN demo_student_id_map m ON s.id = m.old_id;
+UPDATE health_profiles p SET student_id = m.new_id
+FROM demo_student_id_map m WHERE p.student_id = m.old_id;
+UPDATE parent_students p SET student_id = m.new_id
+FROM demo_student_id_map m WHERE p.student_id = m.old_id;
+UPDATE checkup_results r SET student_id = m.new_id
+FROM demo_student_id_map m WHERE r.student_id = m.old_id;
+DELETE FROM students s USING demo_student_id_map m WHERE s.id = m.old_id;
+
+INSERT INTO students (id, full_name, class_name)
+SELECT 'DEMO' || lpad(position::text, 3, '0'), full_name, '6A1'
 FROM unnest(ARRAY[
     'Nguyễn Minh An', 'Trần Ngọc Vy', 'Lê Gia Bảo', 'Phạm Hà My',
     'Võ Nhật Nam', 'Đặng Thảo Linh', 'Bùi Hoàng Khang', 'Đỗ Khánh Chi',
@@ -84,7 +113,7 @@ FROM unnest(ARRAY[
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO health_profiles (student_id, allergies, medical_notes)
-SELECT 'DEMO-' || lpad(n::text, 3, '0'),
+SELECT 'DEMO' || lpad(n::text, 3, '0'),
        CASE n WHEN 1 THEN 'Peanuts' WHEN 9 THEN 'Shrimp' WHEN 17 THEN 'Dust mites' END,
        CASE n WHEN 1 THEN 'Parent reported a food allergy.'
               WHEN 5 THEN 'Wears glasses in class.'
@@ -99,7 +128,7 @@ WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE id = roles.role)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO parent_students (parent_id, student_id)
-VALUES ('parent', 'DEMO-001'), ('parent', 'DEMO-017')
+VALUES ('parent', 'DEMO001'), ('parent', 'DEMO017')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO checkup_sessions (id, title, checkup_date)
@@ -120,7 +149,7 @@ WITH sample AS (
         AS sessions(session_id, current_session)
 )
 INSERT INTO checkup_results (session_id, student_id, status, height_cm, weight_kg, notes)
-SELECT session_id, 'DEMO-' || lpad(n::text, 3, '0'), status,
+SELECT session_id, 'DEMO' || lpad(n::text, 3, '0'), status,
        CASE WHEN status IN ('completed', 'follow_up')
             THEN 138 + (n * 13 % 24) + CASE WHEN current_session THEN 0.8 ELSE 0.0 END END,
        CASE WHEN status IN ('completed', 'follow_up')
