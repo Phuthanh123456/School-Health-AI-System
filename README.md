@@ -2,7 +2,7 @@
 
 SchoolHealth is a web-based school health management platform for students, families, and school health teams. It is designed to keep student health records organized, make checkup results easier to follow, and support coordinated care over time.
 
-> **Project status:** In development. The frontend foundation is in place; backend services and the planned product features are still being developed.
+> **Project status:** Development demo. Login, role-specific screens, student profiles, checkup sessions/results, demo data, and an AI insights preview are available. Some integrations still require local configuration.
 
 ## Product goals
 
@@ -76,34 +76,44 @@ npm run typecheck
 npm run build
 ```
 
-### Backend
+### Full Docker demo
 
-Backend setup instructions will be added when the FastAPI application and its dependency files are available.
-
-### Start PostgreSQL locally
-
-From the repository root with Docker running, copy the sample environment file if you do not already have a local configuration.
+From the repository root, create the local environment file once, then start the complete stack. Compose builds the frontend and API, waits for PostgreSQL, seeds synthetic students and checkup results, and then starts the web app.
 
 ```powershell
 Copy-Item .env.example .env
-docker compose up -d --wait db
-docker compose ps db
-'SELECT 1;' | docker compose exec -T db sh -c 'PGPASSWORD=$POSTGRES_PASSWORD psql -h 127.0.0.1 -U $POSTGRES_USER -d $POSTGRES_DB -v ON_ERROR_STOP=1'
+docker compose up -d --build api frontend
+docker compose ps
 ```
 
-Expect the service to report `healthy` and the query to return `1`. The database is reachable from other Compose services at `db:5432`. The named volume preserves data when the container is recreated. The sample credentials are for local development.
+Open `http://localhost:5174`. Demo accounts use the same password from `SCHOOLHEALTH_DEMO_PASSWORD` in `.env`:
+
+| Role | Email |
+| --- | --- |
+| Admin | `admin@schoolhealth.example` |
+| Nurse | `nurse@schoolhealth.example` |
+| Parent (multiple-child demo) | `parent@schoolhealth.example` |
+| Dedicated Parent | `parent001@schoolhealth.example` (through parent024) |
+| Dedicated Nurse | `nurse001@schoolhealth.example`, `nurse002@schoolhealth.example` |
+
+The database is reachable by Compose services at `db:5432`; the API is available on `http://localhost:8001`. PostgreSQL data stays in the named Compose volume. For AI-generated insights, configure `LLM_API_KEY` in `.env`, then restart with `docker compose up -d --force-recreate api`.
 
 ## Testing and CI
 
-### Admin AI insights (US-6.1)
+### Parent and Admin workspaces (SCRUM-51 / SCRUM-52)
 
-After signing in as Admin, `/admin` loads current school-wide counts directly from the database and can generate Ollama-backed insights. See [US-6.1 setup, API contract and safeguards](docs/US-6.1.md). Configure the provider key only on the backend. AI requests use the same authenticated API client and `VITE_API_URL` as sign-in. The old `/#admin` bookmark now requires an Admin session too.
+After login, Parents open `/parent` to view their own profile and linked children's health information. Admins open `/admin` to filter student health records by Class, Parent and Nurse, paginate results, and assign or remove Parent/Nurse links. The School filter was removed from this scope. See [API contracts, data rules, demo accounts and acceptance checks](docs/SCRUM-51-52.md).
 
-The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on pushes, pull requests, and manual dispatch. It is prepared to:
+The US-5.2 database-backed school overview is available to Admins at `/admin/overview`. It shows distinct students, saved student/session checkup records, Nurse-selected status counts and a status distribution chart. The status table and cards use the same optional metrics from the seeded dataset; no diagnosis is inferred from free-text notes.
+
+The seed now imports Zen's fictional CSVs into the shared `schoolhealth_demo` schema. It preserves saved edits and explicit Admin assignment removals when re-run. School-wide AI insights are integrated into `/admin/overview`; `/admin/insights` opens the same protected dashboard. The shared signed Admin session is used; no extra preview credential is needed. See [US-6.1](docs/US-6.1.md).
+
+The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on pushes, pull requests, and manual dispatch. It:
 
 - Install backend dependencies from `backend/requirements.txt` and run pytest tests in `backend/tests/`.
-- Install frontend dependencies with `npm ci`, then run the `lint`, `typecheck`, and `build` scripts defined in `frontend/package.json`.
-- Install Chromium and run Playwright tests when a `frontend/playwright.config.*` file and test files under `frontend/tests/` are present.
+- Install frontend dependencies with `npm ci`, then run lint, typecheck, build, unit tests and browser specs.
+- Run Parent/Admin integration against a disposable PostgreSQL schema, including concurrent writes and seed preservation.
+- Install Chromium and run Playwright tests when configured test files are present.
 
 Run the corresponding checks locally:
 
@@ -123,7 +133,7 @@ npm run build
 npx playwright test
 ```
 
-Playwright should have a `webServer` configuration to start the application before running end-to-end tests. Backend checks will run once the backend dependency file and tests are added.
+Playwright uses the configuration in `frontend/playwright.config.ts`.
 
 ## Team workflow and data safety
 

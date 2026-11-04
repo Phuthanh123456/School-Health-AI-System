@@ -18,8 +18,6 @@ class Aggregates(BaseModel):
 
     @model_validator(mode="after")
     def consistent_counts(self):
-        if self.checkups_completed > self.total_students:
-            raise ValueError("Completed checkups exceed total students")
         if self.followups_pending > self.checkups_completed:
             raise ValueError("Follow-up count cannot exceed completed checkups")
         return self

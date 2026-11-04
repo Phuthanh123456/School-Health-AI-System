@@ -1,5 +1,7 @@
 import json
+import os
 from datetime import date
+from uuid import uuid4
 
 import httpx
 import pytest
@@ -7,16 +9,18 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, delete, event, update
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
+from sqlalchemy.schema import CreateSchema, DropSchema
 
 from app.config import settings
-from app.database import Base, get_db
+from app.database import Base, get_db, engine as application_engine
 from app.main import app
-from app.models.student import CheckupResult, CheckupSession, Student
+from app.models.checkup import CheckupResult, CheckupSession
+from app.models.student import Student
 from app.schemas.auth import AuthenticatedUser
 from app.services.auth import create_access_token
 from app.services import insights
 
-STATS = dict(total_students=30, checkups_completed=26, followups_pending=5)
+STATS = dict(total_students=30, checkups_completed=56, followups_pending=35)
 SELECTION = dict(highlights=["checkups_completed", "followups_pending"], recommendations=["followup_capacity", "data_review"])
 
 
@@ -26,8 +30,16 @@ def api(monkeypatch):
     monkeypatch.setattr(settings, "llm_base_url", "https://provider.invalid/v1")
     monkeypatch.setattr(settings, "llm_api_key", "test-server-key")
     monkeypatch.setattr(settings, "llm_model", "test-model")
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool,
-                           execution_options={"schema_translate_map": {"schoolhealth_demo": None}})
+    schema = None
+    if os.getenv("RUN_POSTGRES_TESTS") == "1":
+        assert application_engine is not None
+        schema = "insights_test_" + uuid4().hex
+        engine = create_engine(application_engine.url, execution_options={"schema_translate_map": {"schoolhealth_demo": schema}})
+        with engine.begin() as connection:
+            connection.execute(CreateSchema(schema))
+    else:
+        engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool,
+                               execution_options={"schema_translate_map": {"schoolhealth_demo": None}})
     Base.metadata.create_all(engine, tables=[Student.__table__, CheckupSession.__table__, CheckupResult.__table__])
     with Session(engine) as db:
         db.add_all(Student(id=f"PRIVATE{i}", full_name=f"PRIVATE NAME {i}", class_name="PRIVATE CLASS") for i in range(30))
@@ -55,6 +67,9 @@ def api(monkeypatch):
     finally:
         if old_override is None: app.dependency_overrides.pop(get_db, None)
         else: app.dependency_overrides[get_db] = old_override
+        if schema:
+            with engine.begin() as connection:
+                connection.execute(DropSchema(schema, cascade=True))
         engine.dispose()
 
 
@@ -68,11 +83,15 @@ def test_signed_in_admin_and_exact_database_aggregates(api):
     event.remove(engine, 'before_cursor_execute', record_sql)
     assert len(queries) == 1
     assert stats.status_code == 200 and stats.json()['aggregates'] == STATS
-    assert stats.json()['session_date'] == '2026-11-01'
+    assert stats.json()['session_date'] is None
+    overview = client.get('/api/admin/dashboard').json()
+    assert overview['completed_checkups'] == STATS['checkups_completed']
+    assert overview['status_counts']['needs_follow_up'] == STATS['followups_pending']
     response = client.post('/api/admin/ai-insights', json=STATS)
     assert response.status_code == 200
     assert response.headers['Cache-Control'] == 'no-store'
-    assert '26/30' in response.json()['summary'] and '5/30' in response.json()['summary']
+    assert '56' in response.json()['summary'] and '35' in response.json()['summary']
+    assert '/30' not in response.json()['summary']  # record totals must not become student coverage
     assert 'không phải chẩn đoán' in response.json()['disclaimer']
     payload = json.loads(calls[0].content)
     assert json.loads(payload['messages'][1]['content']) == STATS
@@ -87,6 +106,7 @@ def test_non_admin_roles_cannot_access_stats_or_ai(api, role):
     token=create_access_token(AuthenticatedUser(id=role,email=f'{role}@example.test',role=role))
     headers={'Authorization':'Bearer '+token}
     assert client.get('/api/admin/dashboard-statistics',headers=headers).status_code == 403
+    assert client.get('/api/admin/dashboard',headers=headers).status_code == 403
     assert client.post('/api/admin/ai-insights',headers=headers,json=STATS).status_code == 403
     assert not calls
 
@@ -95,6 +115,7 @@ def test_non_admin_roles_cannot_access_stats_or_ai(api, role):
 def test_anonymous_invalid_and_legacy_credentials_are_rejected(api, token):
     client, calls, _, _ = api
     assert client.get('/api/admin/dashboard-statistics',headers={'Authorization':token}).status_code == 401
+    assert client.get('/api/admin/dashboard',headers={'Authorization':token}).status_code == 401
     assert client.post('/api/admin/ai-insights',headers={'Authorization':token},json=STATS).status_code == 401
     assert not calls
 
@@ -115,7 +136,7 @@ def test_extra_or_identifying_fields_rejected(api, extra):
     assert 'PRIVATE' not in response.text and not calls
 
 
-@pytest.mark.parametrize('patch', [dict(total_students='30'),dict(total_students=True),dict(total_students=-1),dict(total_students=1.5),dict(total_students=1_000_001),dict(checkups_completed=31),dict(followups_pending=27),dict(followups_pending=None)])
+@pytest.mark.parametrize('patch', [dict(total_students='30'),dict(total_students=True),dict(total_students=-1),dict(total_students=1.5),dict(total_students=1_000_001),dict(checkups_completed=-1),dict(followups_pending=57),dict(followups_pending=None)])
 def test_invalid_counts_rejected(api, patch):
     client, calls, _, _ = api
     assert client.post('/api/admin/ai-insights',json={**STATS,**patch}).status_code == 422
@@ -135,14 +156,14 @@ def test_forged_or_stale_counts_never_reach_provider(api):
         db.execute(update(CheckupResult).where(CheckupResult.session_id=='latest',CheckupResult.student_id=='PRIVATE0').values(status='pending'))
         db.commit()
     assert client.post('/api/admin/ai-insights',json=STATS).status_code == 409
-    assert client.get('/api/admin/dashboard-statistics').json()['aggregates']['checkups_completed'] == 25
+    assert client.get('/api/admin/dashboard-statistics').json()['aggregates']['checkups_completed'] == 55
     assert not calls
 
 
 def test_small_school_or_examined_cohort_blocks_ai(api):
     client, calls, _, engine = api
     with Session(engine) as db:
-        db.execute(update(CheckupResult).where(CheckupResult.session_id=='latest').values(status='pending'))
+        db.execute(update(CheckupResult).values(status='pending'))
         db.commit()
     actual=client.get('/api/admin/dashboard-statistics').json()['aggregates']
     assert actual['checkups_completed'] == 0
@@ -153,6 +174,7 @@ def test_small_school_or_examined_cohort_blocks_ai(api):
 def test_small_followup_cell_omitted(api):
     client, calls, monkeypatch, engine = api
     with Session(engine) as db:
+        db.execute(update(CheckupResult).where(CheckupResult.session_id=='old').values(status='Normal'))
         db.execute(update(CheckupResult).where(CheckupResult.session_id=='latest',CheckupResult.student_id.in_(['PRIVATE0','PRIVATE1'])).values(status='completed'))
         db.commit()
     monkeypatch.setitem(SELECTION,'highlights',['checkups_completed'])
@@ -170,6 +192,17 @@ def test_absent_pending_and_missing_results_not_counted_as_examined(api):
         db.add(CheckupResult(session_id='latest',student_id='PRIVATE27',status='pending'))
         db.commit()
     assert client.get('/api/admin/dashboard-statistics').json()['aggregates']==STATS
+
+
+def test_nurse_status_vocabulary_matches_dashboard_and_ai(api):
+    client,_,_,engine=api
+    with Session(engine) as db:
+        db.execute(update(CheckupResult).where(CheckupResult.status=='completed').values(status='Normal'))
+        db.execute(update(CheckupResult).where(CheckupResult.status=='follow_up').values(status='Needs Follow-up'))
+        db.commit()
+    assert client.get('/api/admin/dashboard-statistics').json()['aggregates']==STATS
+    assert client.get('/api/admin/dashboard').json()['completed_checkups']==56
+    assert client.post('/api/admin/ai-insights',json=STATS).status_code==200
 
 
 def test_no_sessions_and_empty_school_are_valid_empty_states(api):

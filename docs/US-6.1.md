@@ -6,29 +6,27 @@
 2. In the backend `.env`, configure `LLM_BASE_URL=https://ollama.com/v1`, `LLM_MODEL=gpt-oss:20b`, and `LLM_API_KEY`. For Docker Compose, set these in the root `.env` instead; Compose passes them to the API service. Never use a `VITE_*` variable for provider secrets. Ollama documentation: https://docs.ollama.com/api/openai-compatibility.
 3. Start FastAPI from `backend`: `python -m uvicorn app.main:app --host 127.0.0.1 --port 8000`. Or start the existing Compose API/database services.
 4. Start the frontend with `npm ci` then `npm run dev`. Set `VITE_API_URL` to the same API origin used for sign-in (default `http://127.0.0.1:8000`). Configure `CORS_ORIGINS` to allow the frontend origin. Use HTTPS in production.
-5. Sign in with an existing Admin account and open `/admin`. No additional AI access code is needed. The legacy `/#admin` bookmark is also behind the Admin route guard. Nurse and Parent sessions cannot access either the dashboard statistics or AI endpoint.
+5. Sign in with an existing Admin account and open `/admin/overview` (also linked from Health management). No additional AI access code is needed. The legacy `/#admin` bookmark is also behind the Admin route guard. Nurse and Parent sessions cannot access either the dashboard statistics or AI endpoint.
 
 ## Authoritative statistics
 
-`GET /api/admin/dashboard-statistics` requires the existing signed Admin bearer token. The response contains `aggregates` plus the latest checkup's title/date for display. Titles and dates are **never** forwarded to the LLM.
+`GET /api/admin/dashboard` is the US-5.2 overview used by the UI. AI generation and this endpoint share the same single-statement database aggregation. The compatibility endpoint `/api/admin/dashboard-statistics` returns the same counts under `aggregates`; its old session metadata fields are null because the scope covers all saved sessions.
 
-The database computes exactly three integer counts in one SQL statement:
+- `total_students`: distinct enrolled student rows.
+- `checkups_completed`: saved student/session records with status `completed`, `Normal`, `follow_up` or `Needs Follow-up`, across all sessions.
+- `followups_pending`: the subset of those records marked `follow_up` or `Needs Follow-up`.
 
-- `total_students`: all enrolled students in the current database.
-- `checkups_completed`: students with status `completed` or `follow_up` in the latest school-wide checkup session (ordered by checkup date descending, then session ID ascending to break ties).
-- `followups_pending`: students with status `follow_up` in that same session; this is a subset of examined students.
-
-Students with missing results, `pending` or `absent` are not counted as examined. Historical sessions are not added together. No sessions produces zero examined/follow-up counts; an empty database produces all zero counts. Missing database configuration or connection failure yields a retryable 503 rather than fabricated statistics. Both successful endpoints use `Cache-Control: no-store`.
+The UI maps `completed_checkups` and `status_counts.needs_follow_up` to the AI payload names above. These are record counts, not distinct examined students: 30 students can have 56 saved checkups. AI text explicitly names record counts and never renders 56/30 student coverage. Missing, pending and absent results are excluded. No sessions or results produces zero record counts. Empty schools produce zero totals. Missing database configuration/connection errors return 503. No request loads names, medical notes or individual records for AI.
 
 The schema does not contain standardized dental/vision flags. These unsupported demo metrics were removed; clinical flags are never inferred from free-text notes or vision strings.
 
 ## AI contract and safeguards
 
-`POST /api/admin/ai-insights`, with the same authenticated Admin bearer token. Body is exactly the three counts shown on the dashboard. All are required, strict integers in 0–1,000,000; completed <= total and follow-ups <= completed. Unknown fields, names, IDs, prompts, notes, and record lists are rejected. Validation errors do not echo input.
+`POST /api/admin/ai-insights`, with the same authenticated Admin bearer token. Body is exactly the three counts shown on the dashboard. All are required, strict integers in 0–1,000,000; follow-ups <= completed (record totals may exceed student totals). Unknown fields, names, IDs, prompts, notes, and record lists are rejected. Validation errors do not echo input.
 
 Before calling the provider, the backend re-reads the authoritative database aggregates. Forged or stale counts return 409 with no LLM call. Refreshing the dashboard loads the latest snapshot and enables generation again. Only the validated database counts are serialized; no student rows or medical notes are loaded for AI.
 
-Cohorts below 20 students or 20 examined students cannot generate insights. Nonzero follow-up counts below 5 are withheld from the provider payload; zeros are permitted. These are conservative engineering thresholds, not a guarantee of anonymization. The committed 24-student synthetic CSV dataset has only 19 examined students in its latest session, so it correctly shows the insufficient-cohort state until genuine database activity changes the count. Do not alter counts in the browser to bypass this check.
+Generation requires at least 20 enrolled students and 20 saved completed/follow-up records. Nonzero follow-up counts below 5 are withheld from the provider; zeros are permitted. These conservative engineering thresholds do not guarantee anonymization. The user cannot edit counts or bypass validation in the browser.
 
 Ollama selects 1–2 supported metric codes and 1–3 school action codes. The server validates selections and renders concise Vietnamese text using exact counts and bounded wording. This is **AI-selected, template-rendered text**, not unrestricted model prose. Clinical advice, identifying text, extra output fields, duplicate selections, suppressed metrics and recommendations contradicted by counts are rejected. No model prose or HTML is displayed. There is no historical baseline, diagnosis, prescribing or individual prediction.
 
@@ -36,7 +34,7 @@ Ollama Cloud does not guarantee structured-output enforcement (https://docs.olla
 
 ## UI behavior
 
-The real `/admin` dashboard shows read-only database counts, the relevant session, a refresh button and **Generate AI Insights**. Loading, database unavailable, empty school, no sessions, insufficient cohort, stale counts, invalid provider output and timeout states have explicit recovery behavior. AI failures preserve the visible counts. Refresh cancels in-flight generation and removes old results. Expired sessions redirect to sign-in using the shared authenticated API client. There is no shared-token fallback or public demo route.
+The `/admin/overview` dashboard preserves the US-5.2 metrics/status chart and adds AI Insights using the same visible statistics, with a refresh button and **Generate AI Insights**. Loading, database unavailable, empty school, no sessions, insufficient cohort, stale counts, invalid provider output and timeout states have explicit recovery behavior. AI failures preserve the visible counts. Refresh cancels in-flight generation and removes old results. Expired sessions redirect to sign-in using the shared authenticated API client. There is no shared-token fallback or public demo route. Admin management, Parent and Nurse workspaces are preserved; navigation links connect Admin management and the overview.
 
 ## Validation and release review
 

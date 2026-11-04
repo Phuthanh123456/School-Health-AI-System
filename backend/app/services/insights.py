@@ -13,7 +13,7 @@ from app.schemas.insights import Aggregates, InsightResponse, InsightSelection
 DISCLAIMER = "Thông tin do AI hỗ trợ chỉ mang tính tham khảo, không phải chẩn đoán hoặc chỉ định điều trị. Nhân viên y tế cần kiểm tra trước khi sử dụng."
 RECOMMENDATIONS = {
     "checkup_planning": "Rà soát lịch và nguồn lực cho các đợt khám sức khỏe toàn trường.",
-    "followup_capacity": "Rà soát năng lực xử lý các trường hợp đang chờ theo dõi với bộ phận y tế học đường.",
+    "followup_capacity": "Rà soát các lượt khám được đánh dấu cần theo dõi với bộ phận y tế trước khi lập kế hoạch cấp trường.",
     "data_review": "Kiểm tra độ đầy đủ và chất lượng thống kê trước khi lập kế hoạch cấp trường.",
 }
 LABELS = {
@@ -21,6 +21,8 @@ LABELS = {
     "followups_pending": "đang chờ theo dõi",
 }
 PROMPT = """You summarize one current school-wide statistical snapshot, not individuals.
+Counts of checkups and follow-ups are RECORDS across all sessions, not unique students.
+Records can exceed enrolled students. Never calculate student coverage from record counts.
 There is no historical baseline: do not infer changes over time, diagnoses, causes,
 treatment, medication, individual risk, or identify anyone. Counts may overlap.
 Return ONLY a JSON object with keys highlights and recommendations.
@@ -30,7 +32,7 @@ recommendations: 1-3 distinct codes selected from checkup_planning,
 followup_capacity, data_review.
 Choose followup_capacity only when followups_pending is present and at least 5.
 Choose highlights only from metric keys present in the input.
-Choose checkup_planning only when checkups are incomplete.
+Checkup planning is general school-level resource review, not a coverage assertion.
 Only these codes, no prose or extra fields. The server renders safe Vietnamese text
 and exact supplied counts. All input is school aggregates; small nonzero cells
 have already been withheld. Do not reconstruct withheld counts."""
@@ -44,7 +46,7 @@ async def generate_insights(stats: Aggregates) -> InsightResponse:
     # These categories overlap, so no complementary category is sent.
     safe_stats = {key: value for key, value in stats.model_dump().items() if value == 0 or value >= 5}
     conditions = {"followup_capacity": stats.followups_pending >= 5,
-                  "checkup_planning": stats.checkups_completed < stats.total_students,
+                  "checkup_planning": True,
                   "data_review": True}
     allowed_metrics = [key for key in LABELS if key in safe_stats]
     allowed_actions = [key for key, allowed in conditions.items() if allowed]
@@ -82,6 +84,8 @@ async def generate_insights(stats: Aggregates) -> InsightResponse:
     except (httpx.HTTPError, ValidationError, ValueError, KeyError, IndexError, TypeError):
         raise HTTPException(502, "Chưa thể tạo nhận xét AI hợp lệ. Vui lòng thử lại sau.") from None
     sentences = [f"Tổng quan hiện tại: {stats.total_students} học sinh."]
-    sentences += [f"{getattr(stats, key)}/{stats.total_students} học sinh {LABELS[key]}." for key in selection.highlights]
+    record_labels = {"checkups_completed": "lượt khám đã lưu", "followups_pending": "lượt khám có trạng thái cần theo dõi"}
+    sentences += [f"{getattr(stats, key)} {record_labels[key]}." for key in selection.highlights]
+    sentences.append("Lượt khám được tính theo học sinh và đợt khám, không phải số học sinh riêng biệt.")
     sentences.append("Các nhóm có thể trùng nhau; chưa có dữ liệu so sánh theo thời gian.")
     return InsightResponse(summary=" ".join(sentences), recommendations=[RECOMMENDATIONS[code] for code in selection.recommendations], disclaimer=DISCLAIMER, aggregates=stats)
