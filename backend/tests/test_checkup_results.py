@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from datetime import date
+from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
@@ -63,7 +64,7 @@ def client(db_factory: sessionmaker[Session]) -> Generator[TestClient, None, Non
 
 def test_bmi_uses_metric_units_and_keeps_unrounded_value() -> None:
     assert calculate_bmi(160, 64) == 25
-    assert round(calculate_bmi(170, 65), 2) == 22.49
+    assert round(calculate_bmi(170, 65), 2) == Decimal("22.49")
 
 
 def test_search_matches_name_and_student_code_and_only_returns_participants(client: TestClient) -> None:
