@@ -216,3 +216,34 @@ export function signOut(): void {
     // The session may be unavailable in restricted browser contexts.
   }
 }
+
+export async function authenticatedFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  let value: string | null = null
+  try {
+    value = sessionStorage.getItem(sessionKey)
+  } catch {
+    signOut()
+  }
+
+  let session: unknown
+  try {
+    session = value ? JSON.parse(value) : null
+  } catch {
+    signOut()
+  }
+  if (!isStoredSession(session) || session.expiresAt <= Date.now()) {
+    signOut()
+    window.location.assign('/login')
+    throw new AuthError('Your session has expired. Please sign in again.')
+  }
+
+  const headers = new Headers(options.headers)
+  headers.set('Authorization', `Bearer ${session.accessToken}`)
+  const response = await fetch(`${api}${path}`, { ...options, headers })
+  if (response.status === 401) {
+    signOut()
+    window.location.assign('/login')
+    throw new AuthError('Your session is no longer valid. Please sign in again.')
+  }
+  return response
+}
