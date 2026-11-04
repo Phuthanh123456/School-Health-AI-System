@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Numeric, Text
+from sqlalchemy import Column, Date, ForeignKey, Numeric, Table, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -42,14 +42,10 @@ class CheckupResult(Base):
     __table_args__ = {"schema": "schoolhealth_demo"}
 
     session_id: Mapped[str] = mapped_column(
-        Text,
-        ForeignKey("schoolhealth_demo.checkup_sessions.id"),
-        primary_key=True,
+        Text, ForeignKey("schoolhealth_demo.checkup_sessions.id"), primary_key=True
     )
     student_id: Mapped[str] = mapped_column(
-        Text,
-        ForeignKey("schoolhealth_demo.students.id"),
-        primary_key=True,
+        Text, ForeignKey("schoolhealth_demo.students.id"), primary_key=True
     )
     status: Mapped[str] = mapped_column(Text)
     height_cm: Mapped[float | None] = mapped_column(Numeric(5, 1))
@@ -58,3 +54,27 @@ class CheckupResult(Base):
     vision_right: Mapped[str | None] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)
     student: Mapped[Student] = relationship()
+
+
+# The importer and student API use table-level operations for these link tables.
+accounts = Table(
+    "accounts", Base.metadata,
+    Column("id", Text, primary_key=True), Column("email", Text, nullable=False, unique=True),
+    Column("role", Text, nullable=False), Column("password_hash", Text, nullable=False),
+    schema="schoolhealth_demo",
+)
+student_nurses = Table(
+    "student_nurses", Base.metadata,
+    Column("student_id", Text, ForeignKey("schoolhealth_demo.students.id"), primary_key=True),
+    Column("nurse_id", Text, ForeignKey("schoolhealth_demo.accounts.id"), nullable=False),
+    schema="schoolhealth_demo",
+)
+parent_students = Table(
+    "parent_students", Base.metadata,
+    Column("parent_id", Text, ForeignKey("schoolhealth_demo.accounts.id"), primary_key=True),
+    Column("student_id", Text, ForeignKey("schoolhealth_demo.students.id"), primary_key=True),
+    schema="schoolhealth_demo",
+)
+
+checkup_sessions = CheckupSession.__table__
+checkup_results = CheckupResult.__table__

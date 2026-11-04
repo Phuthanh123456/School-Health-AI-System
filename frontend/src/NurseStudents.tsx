@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { authenticatedFetch, signOut } from './auth'
 
-type Student = { id: string; full_name: string; class_name: string }
+type Student = { id: string; full_name: string; class_name: string; parentid?: string | null; nurseid?: string | null }
 type Profile = Student & { allergies: string | null; medical_notes: string | null }
 type Session = { id: string; title: string; checkup_date: string }
 type Result = Profile & {
@@ -59,6 +59,7 @@ function StudentForm({ profile, onSaved, onSaving }: {
       full_name: String(form.get('full_name')).trim(), class_name: String(form.get('class_name')).trim(),
       allergies: String(form.get('allergies')).trim() || null,
       medical_notes: String(form.get('medical_notes')).trim() || null,
+      parentid: String(form.get('parentid')).trim(), nurseid: String(form.get('nurseid')).trim(),
     }
     setError(''); onSaving(true)
     try {
@@ -72,9 +73,11 @@ function StudentForm({ profile, onSaved, onSaving }: {
     } catch (cause) { setError(errorMessage(cause)) } finally { onSaving(false) }
   }
   return <form onSubmit={save} className="mt-5 space-y-4">
-    <label className="block text-sm font-semibold">Student ID<input className={input} name="id" defaultValue={profile?.id} required maxLength={50} readOnly={Boolean(profile)} pattern="[A-Za-z0-9_\-]+" placeholder="e.g. STU-001" /></label>
+    <label className="block text-sm font-semibold">Student ID<input className={input} name="id" defaultValue={profile?.id} required maxLength={50} readOnly={Boolean(profile)} pattern="[A-Za-z0-9]+" placeholder="e.g. STU001" /></label>
     <label className="block text-sm font-semibold">Full name<input className={input} name="full_name" defaultValue={profile?.full_name} required maxLength={200} /></label>
     <label className="block text-sm font-semibold">Class / grade<input className={input} name="class_name" defaultValue={profile?.class_name} required maxLength={50} placeholder="e.g. 6A1" /></label>
+    <label className="block text-sm font-semibold">Parent account ID<input className={input} name="parentid" defaultValue={profile?.parentid ?? ''} required maxLength={50} placeholder="e.g. PARENT001" /></label>
+    <label className="block text-sm font-semibold">Nurse account ID<input className={input} name="nurseid" defaultValue={profile?.nurseid ?? ''} required maxLength={50} placeholder="e.g. NURSE001" /></label>
     <label className="block text-sm font-semibold">Allergies<textarea className={input} name="allergies" defaultValue={profile?.allergies ?? ''} rows={2} maxLength={2000} placeholder="No known allergies or add details" /></label>
     <label className="block text-sm font-semibold">Relevant health notes<textarea className={input} name="medical_notes" defaultValue={profile?.medical_notes ?? ''} rows={3} maxLength={2000} /></label>
     {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
@@ -153,6 +156,17 @@ export default function NurseStudents() {
     setProfile(saved); setSelectedId(saved.id); setAddingStudent(false); setNotice('Student details saved.')
   }
 
+  async function deleteStudent() {
+    if (!profile || !window.confirm(`Permanently delete ${profile.full_name} (${profile.id}) and its related health/checkup records?`)) return
+    setSaving(true); setError(''); setNotice('')
+    try {
+      await request<void>(`/students/${encodeURIComponent(profile.id)}`, { method: 'DELETE' })
+      setStudents((current) => current.filter((item) => item.id !== profile.id))
+      setResults((current) => current.filter((item) => item.id !== profile.id))
+      setProfile(null); setSelectedId(''); setSelectedResult(null); setNotice('Student and related records deleted.')
+    } catch (cause) { setError(errorMessage(cause)) } finally { setSaving(false) }
+  }
+
   async function saveResult(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!sessionId || !selectedResult) return
@@ -226,7 +240,7 @@ export default function NurseStudents() {
         </section>
 
         <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
-          {tab === 'students' ? <><p className="text-xs font-bold uppercase tracking-wider text-primary-strong">Student profile</p><h2 className="mt-1 font-display text-xl font-bold">{addingStudent ? 'Add a student' : profile?.full_name ?? 'Select a student'}</h2>{profile && !addingStudent && <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted"><span className="rounded-full bg-background px-3 py-1.5">{profile.id}</span><span className="rounded-full bg-background px-3 py-1.5">Class {profile.class_name}</span></div>}{addingStudent || profile ? <StudentForm key={profile?.id ?? 'new'} profile={addingStudent ? null : profile} onSaved={studentSaved} onSaving={setSaving} /> : <p className="mt-3 text-sm leading-6 text-muted">Choose a student from the directory to review or update available health information. Age, gender, and guardian contact are not currently part of the shared student data model.</p>}</> : <>
+          {tab === 'students' ? <><p className="text-xs font-bold uppercase tracking-wider text-primary-strong">Student profile</p><h2 className="mt-1 font-display text-xl font-bold">{addingStudent ? 'Add a student' : profile?.full_name ?? 'Select a student'}</h2>{profile && !addingStudent && <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted"><span className="rounded-full bg-background px-3 py-1.5">{profile.id}</span><span className="rounded-full bg-background px-3 py-1.5">Class {profile.class_name}</span></div>}{addingStudent || profile ? <><StudentForm key={profile?.id ?? 'new'} profile={addingStudent ? null : profile} onSaved={studentSaved} onSaving={setSaving} /><div className="mt-4 border-t border-border pt-4">{profile && <button className="rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50" type="button" disabled={saving} onClick={deleteStudent}>Delete student</button>}</div></> : <p className="mt-3 text-sm leading-6 text-muted">Choose a student from the directory to review or update available health information. Age, gender, and guardian contact are not currently part of the shared student data model.</p>}</> : <>
             <p className="text-xs font-bold uppercase tracking-wider text-primary-strong">Examination record</p><h2 className="mt-1 font-display text-xl font-bold">{selectedResult?.full_name ?? 'Select a student'}</h2>
             {selectedResult ? <><p className="mt-1 text-sm text-muted">{selectedResult.id} · Class {selectedResult.class_name}</p>{(selectedResult.allergies || selectedResult.medical_notes) && <div className="mt-4 rounded-xl bg-amber-50 p-3 text-sm"><strong>Health information</strong>{selectedResult.allergies && <p className="mt-1">Allergies: {selectedResult.allergies}</p>}{selectedResult.medical_notes && <p className="mt-1">Notes: {selectedResult.medical_notes}</p>}</div>}
               <form key={`${sessionId}:${selectedResult.id}`} onSubmit={saveResult} className="mt-5 space-y-4">

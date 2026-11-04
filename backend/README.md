@@ -40,46 +40,54 @@ The endpoint tests use FastAPI's test client and test authentication against syn
 
 ## Seed TASK-01 demo data
 
-From the repository root, configure the local Compose `.env` and start PostgreSQL
-with `docker compose up -d --wait db`. In PowerShell, set
-`$env:SCHOOLHEALTH_DEMO_PASSWORD` to a demo-only password of at least eight
-characters and at most 72 UTF-8 bytes. Set `$OutputEncoding = [Text.UTF8Encoding]::new($false)`
-to preserve Vietnamese names when piping SQL.
+From the repository root, configure the Compose .env and run
+`docker compose up -d --build api`. Set the local environment variable
+`SCHOOLHEALTH_DEMO_PASSWORD` to a demo-only password of 8–72 UTF-8 bytes.
 
-Run the seed with one command:
+Import the CSV dataset with one command.
 
 ```powershell
-Get-Content -Raw -Encoding UTF8 backend/scripts/seed_demo.sql | docker compose exec -T -e SCHOOLHEALTH_DEMO_PASSWORD db sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+docker compose exec -T -e SCHOOLHEALTH_DEMO_PASSWORD api python -m app.seed_demo
 ```
 
-The script creates 24 fictional students in class 6A1,
-24 health profiles, two checkup sessions, and 48 result rows. Results include
-completed, follow-up, pending, and absent statuses. Pending and absent rows have
-no measurements so dashboards can distinguish them from completed screenings.
+The committed UTF-8 BOM files in `backend/data/` contain 24 fictional students,
+their health profiles, 27 demo accounts, two checkup sessions, and 48 checkup
+results. The student CSV columns are `id,full_name,class_name,parentid,allergies,medical_notes,nurseid`.
+The BOM helps Excel recognize Vietnamese text when opening the CSV directly.
+Each student has a dedicated synthetic parent account, for example `DEMO001`
+links to `PARENT001`. The importer replaces legacy shared `parent` links with
+these dedicated IDs. Existing custom parent assignments are preserved.
 
-| Role | Demo account |
-| --- | --- |
-| Admin | `admin@schoolhealth.example` |
-| Nurse | `nurse@schoolhealth.example` |
-| Parent | `parent@schoolhealth.example` |
+The 24 students are evenly assigned to two synthetic Nurse accounts.
+DEMO001 through DEMO012 use NURSE001 and DEMO013 through DEMO024 use NURSE002.
+The API and form require nurseid when creating a student and allow reassignment
+to an existing account with role nurse. The database stores one Nurse assignment
+per student in student_nurses. Reimport preserves existing assignments.
 
-The initial accounts share the demo password supplied on the first run and store
-bcrypt hashes through PostgreSQL's `pgcrypto` extension. The parent is linked
-to students `DEMO-001` and `DEMO-017`. Rerunning the seed fills in missing demo
-rows and preserves existing rows, including profile edits and password hashes.
+The accounts CSV contains account IDs, emails, and roles. Initial password hashes
+are generated from the locally supplied password using PostgreSQL pgcrypto.
+Rerunning the importer inserts missing records and preserves existing profile
+edits, parent assignments, and password hashes. CSV edits do not overwrite
+existing database records. All inserts run in one transaction.
+After changing CSV files, rebuild the API image before importing.
 
 The seed writes to the application's PostgreSQL `schoolhealth_demo` schema.
 `GET /students` reads `schoolhealth_demo.students` and returns each student's `id`,
-`full_name`, and `class_name`, ordered by ID.
+`full_name`, `class_name`, `parentid`, and `nurseid`, ordered by ID.
 `POST /students` creates a student and health profile in one transaction. Send
 `id`, `full_name`, and `class_name` as nonblank strings. You can also send
-`allergies` and `medical_notes`. The API returns HTTP 201 on success, 409 if the
+`allergies`, `medical_notes`, `parentid`, and `nurseid`. Parent and Nurse IDs must reference existing accounts with the matching role; both fields are required when creating a student. The API returns HTTP 201 on success, 409 if the
 student ID already exists, and 422 if the request fails validation.
-New student IDs must contain 1–50 ASCII letters, digits, hyphens, or underscores
-(`A-Z`, `a-z`, `0-9`, `-`, `_`). The creation form enforces the same format.
+New student IDs must contain 1–50 ASCII letters and digits
+(`A-Z`, `a-z`, `0-9`). The creation form enforces the same format.
+The Nurse screen filters IDs by a case-insensitive substring. API clients can
+also use `GET /students?student_id=DEMO001`.
+`DELETE /students/{student_id}` permanently removes the student, health profile,
+parent links, and checkup results in one transaction. The screen requests
+confirmation before deletion. Rerunning the demo seed recreates missing sample rows.
 `GET /students/{student_id}` returns the student's basic profile.
 `PATCH /students/{student_id}` accepts changes to `full_name`, `class_name`,
-`allergies`, and `medical_notes`. Omitted fields keep their values. Send
+`allergies`, `medical_notes`, `parentid`, and `nurseid`. Omitted fields keep their values. Send
 `null` or a blank string to clear allergies or notes. An unknown ID returns 404.
 If you ran an older seed into `public`, rerun the command above to populate
 `schoolhealth_demo` with the shared demo accounts and sample records.
@@ -106,9 +114,9 @@ All routes below require the authenticated `nurse` role. Send the login token as
 `Authorization: Bearer <access_token>`.
 
 - `GET /students?q=<term>` lists up to 200 students and searches ID, name, and
-  class. `POST /students`, `GET /students/{student_id}`, and
+  class. The legacy `student_id` query parameter remains supported. `POST /students`, `GET /students/{student_id}`, and
   `PATCH /students/{student_id}` manage available student and health-profile
-  fields (`id`, `full_name`, `class_name`, `allergies`, `medical_notes`).
+  fields (`id`, `full_name`, `class_name`, `allergies`, `medical_notes`, `parentid`, `nurseid`).
 - `GET /checkup-sessions` lists seeded sessions.
 - `GET /checkup-sessions/{session_id}/results?q=<term>` returns a session roster
   with each student's profile, examination status, measurements, vision, notes,
