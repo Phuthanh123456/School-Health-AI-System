@@ -30,6 +30,12 @@ accounts = Table(
     Column("role", Text, nullable=False), Column("password_hash", Text, nullable=False),
     schema="public",
 )
+student_nurses = Table(
+    "student_nurses", Base.metadata,
+    Column("student_id", Text, ForeignKey("public.students.id"), primary_key=True),
+    Column("nurse_id", Text, ForeignKey("public.accounts.id"), nullable=False),
+    schema="public",
+)
 parent_students = Table(
     "parent_students", Base.metadata,
     Column("parent_id", Text, ForeignKey("public.accounts.id"), primary_key=True),

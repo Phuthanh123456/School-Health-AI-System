@@ -50,12 +50,19 @@ Import the CSV dataset with one command.
 docker compose exec -T -e SCHOOLHEALTH_DEMO_PASSWORD api python -m app.seed_demo
 ```
 
-The committed UTF-8 files in `backend/data/` contain 26 fictional students,
-their health profiles, three demo accounts, two checkup sessions, and 48 checkup
-results. The student CSV columns are `id,full_name,class_name,parentid,allergies,medical_notes`.
-It snapshots the current demo data, including two manually added fictional students.
-Every student has a parent ID. Students previously lacking a parent link are
-assigned to the synthetic `parent` account.
+The committed UTF-8 BOM files in `backend/data/` contain 24 fictional students,
+their health profiles, 27 demo accounts, two checkup sessions, and 48 checkup
+results. The student CSV columns are `id,full_name,class_name,parentid,allergies,medical_notes,nurseid`.
+The BOM helps Excel recognize Vietnamese text when opening the CSV directly.
+Each student has a dedicated synthetic parent account, for example `DEMO001`
+links to `PARENT001`. The importer replaces legacy shared `parent` links with
+these dedicated IDs. Existing custom parent assignments are preserved.
+
+The 24 students are evenly assigned to two synthetic Nurse accounts.
+DEMO001 through DEMO012 use NURSE001 and DEMO013 through DEMO024 use NURSE002.
+The API and form require nurseid when creating a student and allow reassignment
+to an existing account with role nurse. The database stores one Nurse assignment
+per student in student_nurses. Reimport preserves existing assignments.
 
 The accounts CSV contains account IDs, emails, and roles. Initial password hashes
 are generated from the locally supplied password using PostgreSQL pgcrypto.
@@ -69,7 +76,7 @@ The seed writes to the application's PostgreSQL `public` schema.
 `full_name`, `class_name`, and `parentid`, ordered by ID.
 `POST /students` creates a student and health profile in one transaction. Send
 `id`, `full_name`, and `class_name` as nonblank strings. You can also send
-`allergies`, `medical_notes`, and `parentid`. The parent ID must reference an existing account with role parent. Existing callers that omit it use the demo account `parent`. The API returns HTTP 201 on success, 409 if the
+`allergies`, `medical_notes`, and `parentid`. The parent ID must reference an existing account with role parent. The `parentid` field is required when creating a student. The API returns HTTP 201 on success, 409 if the
 student ID already exists, and 422 if the request fails validation.
 New student IDs must contain 1–50 ASCII letters and digits
 (`A-Z`, `a-z`, `0-9`). The creation form enforces the same format.

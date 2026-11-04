@@ -18,6 +18,7 @@ class StudentSummary(BaseModel):
     full_name: str
     class_name: str
     parentid: str | None = None
+    nurseid: str | None = None
 
 
 class StudentCreate(BaseModel):
@@ -28,7 +29,8 @@ class StudentCreate(BaseModel):
     class_name: ClassName
     allergies: HealthText | None = None
     medical_notes: HealthText | None = None
-    parentid: ClassName = "parent"
+    parentid: ClassName
+    nurseid: ClassName
 
 
 class StudentUpdate(BaseModel):
@@ -39,8 +41,9 @@ class StudentUpdate(BaseModel):
     allergies: HealthText | None = None
     medical_notes: HealthText | None = None
     parentid: ClassName | None = None
+    nurseid: ClassName | None = None
 
-    @field_validator("full_name", "class_name", "parentid")
+    @field_validator("full_name", "class_name", "parentid", "nurseid")
     @classmethod
     def require_text_when_provided(cls, value: str | None) -> str:
         if value is None:

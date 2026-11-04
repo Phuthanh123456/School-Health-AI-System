@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.student import HealthProfile, Student, accounts, checkup_results, parent_students
+from app.models.student import HealthProfile, Student, accounts, checkup_results, parent_students, student_nurses
 from app.schemas.student import StudentCreate, StudentProfile, StudentSummary, StudentUpdate
 
 
@@ -17,19 +17,23 @@ parent_id_query = (
     .where(parent_students.c.student_id == Student.id)
     .correlate(Student).scalar_subquery().label("parentid")
 )
+nurse_id_query = (
+    select(student_nurses.c.nurse_id).where(student_nurses.c.student_id == Student.id)
+    .correlate(Student).scalar_subquery().label("nurseid")
+)
 
 
-def validate_parent(db: Session, parentid: str) -> None:
+def validate_account(db: Session, account_id: str, role: str) -> None:
     if db.scalar(select(accounts.c.id).where(
-        accounts.c.id == parentid, accounts.c.role == "parent"
+        accounts.c.id == account_id, accounts.c.role == role
     )) is None:
-        raise HTTPException(status_code=422, detail="Parent account does not exist")
+        raise HTTPException(status_code=422, detail=f"Account with role {role} does not exist")
 
 
 def read_profile(db: Session, student_id: str) -> StudentProfile:
     row = db.execute(
         select(Student.id, Student.full_name, Student.class_name,
-               HealthProfile.allergies, HealthProfile.medical_notes, parent_id_query)
+               HealthProfile.allergies, HealthProfile.medical_notes, parent_id_query, nurse_id_query)
         .outerjoin(HealthProfile, HealthProfile.student_id == Student.id)
         .where(Student.id == student_id)
     ).mappings().one_or_none()
@@ -43,7 +47,7 @@ def list_students(
     db: Annotated[Session, Depends(get_db)],
     student_id: Annotated[str | None, Query(max_length=50)] = None,
 ) -> list[StudentSummary]:
-    query = select(Student.id, Student.full_name, Student.class_name, parent_id_query).order_by(Student.id)
+    query = select(Student.id, Student.full_name, Student.class_name, parent_id_query, nurse_id_query).order_by(Student.id)
     if student_id and student_id.strip():
         query = query.where(Student.id.icontains(student_id.strip(), autoescape=True))
     students = db.execute(query).mappings()
@@ -60,7 +64,8 @@ def create_student(
         medical_notes=student.medical_notes or None,
     )
     with db.begin():
-        validate_parent(db, student.parentid)
+        validate_account(db, student.parentid, "parent")
+        validate_account(db, student.nurseid, "nurse")
         new_id = db.scalar(
             insert(Student)
             .values(id=profile.id, full_name=profile.full_name, class_name=profile.class_name)
@@ -77,6 +82,7 @@ def create_student(
             )
         )
         db.execute(insert(parent_students).values(parent_id=student.parentid, student_id=new_id))
+        db.execute(insert(student_nurses).values(nurse_id=student.nurseid, student_id=new_id))
     return profile
 
 
@@ -97,9 +103,18 @@ def update_student(
 
         if "parentid" in changes:
             parentid = changes.pop("parentid")
-            validate_parent(db, parentid)
+            validate_account(db, parentid, "parent")
             db.execute(delete(parent_students).where(parent_students.c.student_id == student_id))
             db.execute(insert(parent_students).values(parent_id=parentid, student_id=student_id))
+
+        if "nurseid" in changes:
+            nurseid = changes.pop("nurseid")
+            validate_account(db, nurseid, "nurse")
+            db.execute(insert(student_nurses).values(
+                student_id=student_id, nurse_id=nurseid
+            ).on_conflict_do_update(
+                index_elements=["student_id"], set_={"nurse_id": nurseid}
+            ))
 
         for field in ("full_name", "class_name"):
             if field in changes:
@@ -125,6 +140,7 @@ def delete_student(student_id: str, db: Annotated[Session, Depends(get_db)]) -> 
             raise HTTPException(status_code=404, detail="Student not found")
         db.execute(delete(checkup_results).where(checkup_results.c.student_id == student_id))
         db.execute(delete(parent_students).where(parent_students.c.student_id == student_id))
+        db.execute(delete(student_nurses).where(student_nurses.c.student_id == student_id))
         db.execute(delete(HealthProfile).where(HealthProfile.student_id == student_id))
         db.delete(student)
     return Response(status_code=204)

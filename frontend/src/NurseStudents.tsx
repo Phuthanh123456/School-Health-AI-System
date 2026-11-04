@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 
-type Student = { id: string; full_name: string; class_name: string; parentid: string | null }
+type Student = { id: string; full_name: string; class_name: string; parentid: string | null; nurseid: string | null }
 type Profile = Student & { allergies: string | null; medical_notes: string | null }
 
 const api = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
@@ -39,11 +39,12 @@ function ProfileForm({ profile, onSaved, onSaving, busy }: {
       full_name: String(fields.get('full_name')).trim(),
       class_name: String(fields.get('class_name')).trim(),
       parentid: String(fields.get('parentid')).trim(),
+      nurseid: String(fields.get('nurseid')).trim(),
       allergies: String(fields.get('allergies')).trim() || null,
       medical_notes: String(fields.get('medical_notes')).trim() || null,
     }
-    if (!id || !values.full_name || !values.class_name || !values.parentid) {
-      setError('Nhập mã học sinh, họ tên, lớp và mã phụ huynh.')
+    if (!id || !values.full_name || !values.class_name || !values.parentid || !values.nurseid) {
+      setError('Nhập mã học sinh, họ tên, lớp, mã phụ huynh và mã điều dưỡng.')
       return
     }
     setError('')
@@ -85,7 +86,14 @@ function ProfileForm({ profile, onSaved, onSaving, busy }: {
           <textarea className={inputStyle} name="allergies" defaultValue={profile?.allergies ?? ''} rows={2} maxLength={2000} />
         </label>
         <label className="text-sm font-semibold">Mã phụ huynh
-          <input className={inputStyle} name="parentid" defaultValue={profile?.parentid ?? 'parent'} required maxLength={50} />
+          <input className={inputStyle} name="parentid" defaultValue={profile?.parentid ?? ''} placeholder="Ví dụ PARENT001" required maxLength={50} />
+        </label>
+        <label className="text-sm font-semibold">Mã điều dưỡng
+          <select className={inputStyle} name="nurseid" defaultValue={profile?.nurseid ?? ''} required>
+            <option value="">Chọn điều dưỡng</option>
+            <option value="NURSE001">NURSE001</option>
+            <option value="NURSE002">NURSE002</option>
+          </select>
         </label>
         <label className="text-sm font-semibold">Ghi chú y tế
           <textarea className={inputStyle} name="medical_notes" defaultValue={profile?.medical_notes ?? ''} rows={3} maxLength={2000} />

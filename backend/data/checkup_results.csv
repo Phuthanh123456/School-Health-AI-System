@@ -1,4 +1,4 @@
-session_id,student_id,status,height_cm,weight_kg,notes
+﻿session_id,student_id,status,height_cm,weight_kg,notes
 DEMO-BASELINE,DEMO001,follow_up,151.0,39.0,Confirm the allergy note with the parent.
 DEMO-BASELINE,DEMO002,completed,140.0,46.0,
 DEMO-BASELINE,DEMO003,completed,153.0,53.0,

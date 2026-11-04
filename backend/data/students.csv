@@ -1,27 +1,25 @@
-id,full_name,class_name,parentid,allergies,medical_notes
-DEMO001,Nguyễn Minh An,6A1,parent,Peanuts,Parent reported a food allergy.
-DEMO002,Trần Ngọc Vy,6A1,parent,,
-DEMO003,Lê Gia Bảo,6A1,parent,,
-DEMO004,Phạm Hà My,6A1,parent,,
-DEMO005,Võ Nhật Nam,6A1,parent,,Wears glasses in class.
-DEMO006,Đặng Thảo Linh,6A1,parent,,
-DEMO007,Bùi Hoàng Khang,6A1,parent,,
-DEMO008,Đỗ Khánh Chi,6A1,parent,,
-DEMO009,Ngô Tú Anh,6A1,parent,Shrimp,
-DEMO010,Phan Đức Huy,6A1,parent,,
-DEMO011,Vũ Bảo Ngọc,6A1,parent,,
-DEMO012,Hoàng Minh Quân,6A1,parent,,
-DEMO013,Dương Mai Anh,6A1,parent,,
-DEMO014,Trương Tuấn Kiệt,6A1,parent,,Recheck vision at the next school session.
-DEMO015,Hồ Quỳnh Như,6A1,parent,,
-DEMO016,Lý An Nhiên,6A1,parent,,
-DEMO017,Nguyễn Hải Đăng,6A1,parent,Dust mites,
-DEMO018,Trần Thanh Trúc,6A1,parent,,
-DEMO019,Lê Thiên Phúc,6A1,parent,,
-DEMO020,Phạm Bích Ngân,6A1,parent,,
-DEMO021,Võ Anh Khoa,6A1,parent,,
-DEMO022,Đặng Minh Châu,6A1,parent,,
-DEMO023,Bùi Gia Hân,6A1,parent,,
-DEMO024,Đỗ Thành Đạt,6A1,parent,,
-DEMO025,Hưng Phùng,6A1,parent,,
-DEMO090,Lê Thế Vinh,6A2,parent,Gay,"Sùi mào gà, giang mai"
+﻿"id","full_name","class_name","parentid","allergies","medical_notes","nurseid"
+"DEMO001","Nguyễn Minh An","6A1","PARENT001","Peanuts","Parent reported a food allergy.","NURSE001"
+"DEMO002","Trần Ngọc Vy","6A1","PARENT002","","","NURSE001"
+"DEMO003","Lê Gia Bảo","6A1","PARENT003","","","NURSE001"
+"DEMO004","Phạm Hà My","6A1","PARENT004","","","NURSE001"
+"DEMO005","Võ Nhật Nam","6A1","PARENT005","","Wears glasses in class.","NURSE001"
+"DEMO006","Đặng Thảo Linh","6A1","PARENT006","","","NURSE001"
+"DEMO007","Bùi Hoàng Khang","6A1","PARENT007","","","NURSE001"
+"DEMO008","Đỗ Khánh Chi","6A1","PARENT008","","","NURSE001"
+"DEMO009","Ngô Tú Anh","6A1","PARENT009","Shrimp","","NURSE001"
+"DEMO010","Phan Đức Huy","6A1","PARENT010","","","NURSE001"
+"DEMO011","Vũ Bảo Ngọc","6A1","PARENT011","","","NURSE001"
+"DEMO012","Hoàng Minh Quân","6A1","PARENT012","","","NURSE001"
+"DEMO013","Dương Mai Anh","6A1","PARENT013","","","NURSE002"
+"DEMO014","Trương Tuấn Kiệt","6A1","PARENT014","","Recheck vision at the next school session.","NURSE002"
+"DEMO015","Hồ Quỳnh Như","6A1","PARENT015","","","NURSE002"
+"DEMO016","Lý An Nhiên","6A1","PARENT016","","","NURSE002"
+"DEMO017","Nguyễn Hải Đăng","6A1","PARENT017","Dust mites","","NURSE002"
+"DEMO018","Trần Thanh Trúc","6A1","PARENT018","","","NURSE002"
+"DEMO019","Lê Thiên Phúc","6A1","PARENT019","","","NURSE002"
+"DEMO020","Phạm Bích Ngân","6A1","PARENT020","","","NURSE002"
+"DEMO021","Võ Anh Khoa","6A1","PARENT021","","","NURSE002"
+"DEMO022","Đặng Minh Châu","6A1","PARENT022","","","NURSE002"
+"DEMO023","Bùi Gia Hân","6A1","PARENT023","","","NURSE002"
+"DEMO024","Đỗ Thành Đạt","6A1","PARENT024","","","NURSE002"

@@ -6,12 +6,12 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-from sqlalchemy import func, select, text
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.dialects.postgresql import insert
 
 from app.database import Base, engine
 from app.models.student import (
-    HealthProfile, Student, accounts, checkup_results, checkup_sessions, parent_students,
+    HealthProfile, Student, accounts, checkup_results, checkup_sessions, parent_students, student_nurses,
 )
 from app.schemas.student import StudentCreate
 
@@ -31,12 +31,15 @@ def seed(folder: Path, password: str) -> None:
     sessions = load_csv(folder, "checkup_sessions")
     results = load_csv(folder, "checkup_results")
     parent_ids = {row["id"] for row in account_rows if row["role"] == "parent"}
+    nurse_ids = {row["id"] for row in account_rows if row["role"] == "nurse"}
     for rows in ([s.model_dump() for s in students], account_rows, sessions):
         ids = [row["id"] for row in rows]
         if len(ids) != len(set(ids)):
             raise ValueError("CSV contains duplicate IDs")
     if any(s.parentid not in parent_ids for s in students):
         raise ValueError("Every student must reference a parent account in accounts.csv")
+    if any(s.nurseid not in nurse_ids for s in students):
+        raise ValueError("Every student must reference a nurse account in accounts.csv")
     if any(row["role"] not in {"admin", "nurse", "parent"} for row in account_rows):
         raise ValueError("Unsupported account role")
     student_ids = {s.id for s in students}
@@ -68,10 +71,18 @@ def seed(folder: Path, password: str) -> None:
                 student_id=student.id, allergies=values["allergies"] or None,
                 medical_notes=values["medical_notes"] or None,
             ).on_conflict_do_nothing(index_elements=["student_id"]))
+            connection.execute(insert(student_nurses).values(
+                student_id=student.id, nurse_id=student.nurseid
+            ).on_conflict_do_nothing(index_elements=["student_id"]))
             linked = connection.scalar(select(parent_students.c.parent_id).where(
                 parent_students.c.student_id == student.id
             ).limit(1))
-            if linked is None:
+            if linked == "parent":
+                connection.execute(delete(parent_students).where(
+                    parent_students.c.student_id == student.id,
+                    parent_students.c.parent_id == "parent",
+                ))
+            if linked is None or linked == "parent":
                 connection.execute(insert(parent_students).values(
                     parent_id=student.parentid, student_id=student.id
                 ).on_conflict_do_nothing())
