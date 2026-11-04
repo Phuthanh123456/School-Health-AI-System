@@ -17,15 +17,15 @@ export type CheckupSessionDetail = CheckupSessionSummary & {
 }
 
 const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api'
+  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 ).replace(/\/+$/, '')
 
-async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
+async function getJson<T>(path: string, authorization: string, signal?: AbortSignal): Promise<T> {
   let response: Response
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
-      headers: { Accept: 'application/json' },
+      headers: { Accept: 'application/json', Authorization: authorization },
       signal,
     })
   } catch (error) {
@@ -34,6 +34,7 @@ async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   }
 
   if (!response.ok) {
+    if (response.status === 401) throw new Error('Phiên đăng nhập Nurse đã hết hạn. Hãy đăng nhập lại.')
     if (response.status === 404) throw new Error('Không tìm thấy đợt khám này.')
     throw new Error('Không tải được dữ liệu đợt khám. Hãy thử lại sau.')
   }
@@ -41,16 +42,18 @@ async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   return (await response.json()) as T
 }
 
-export function listCheckupSessions(signal?: AbortSignal): Promise<CheckupSessionSummary[]> {
-  return getJson<CheckupSessionSummary[]>('/checkup-sessions', signal)
+export function listCheckupSessions(authorization: string, signal?: AbortSignal): Promise<CheckupSessionSummary[]> {
+  return getJson<CheckupSessionSummary[]>('/checkups/sessions', authorization, signal)
 }
 
 export function getCheckupSession(
   sessionId: string,
+  authorization: string,
   signal?: AbortSignal,
 ): Promise<CheckupSessionDetail> {
   return getJson<CheckupSessionDetail>(
-    `/checkup-sessions/${encodeURIComponent(sessionId)}`,
+    `/checkups/sessions/${encodeURIComponent(sessionId)}`,
+    authorization,
     signal,
   )
 }

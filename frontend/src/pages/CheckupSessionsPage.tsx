@@ -8,6 +8,7 @@ import {
 } from '../api/checkupSessions'
 
 type CheckupSessionsPageProps = {
+  authorization: string
   selectedSessionId: string | null
   onBackHome: () => void
   onSelectSession: (sessionId: string | null) => void
@@ -61,6 +62,7 @@ function EmptySessions() {
 }
 
 function CheckupSessionsPage({
+  authorization,
   selectedSessionId,
   onBackHome,
   onSelectSession,
@@ -81,7 +83,7 @@ function CheckupSessionsPage({
     setSessionsState('loading')
     setSessionsError('')
 
-    listCheckupSessions(controller.signal)
+    listCheckupSessions(authorization, controller.signal)
       .then((data) => {
         setSessions(data)
         setSessionsState('ready')
@@ -93,7 +95,7 @@ function CheckupSessionsPage({
       })
 
     return () => controller.abort()
-  }, [sessionsReload])
+  }, [authorization, sessionsReload])
 
   useEffect(() => {
     if (!selectedSessionId) {
@@ -107,7 +109,7 @@ function CheckupSessionsPage({
     setSessionState('loading')
     setSessionError('')
 
-    getCheckupSession(selectedSessionId, controller.signal)
+    getCheckupSession(selectedSessionId, authorization, controller.signal)
       .then((data) => {
         setSession(data)
         setSessionState('ready')
@@ -120,7 +122,7 @@ function CheckupSessionsPage({
       })
 
     return () => controller.abort()
-  }, [selectedSessionId, sessionReload])
+  }, [authorization, selectedSessionId, sessionReload])
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -309,10 +311,10 @@ function CheckupSessionsPage({
                   </div>
 
                   <div className="mt-6 border-t border-border pt-5">
-                    <button type="button" onClick={() => onContinueToResults(session.id)} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:w-auto">
+                    <button type="button" disabled={session.students.length === 0} onClick={() => onContinueToResults(session.id)} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
                       Tiếp tục đến nhập kết quả <ArrowIcon />
                     </button>
-                    <p className="mt-2 text-xs leading-5 text-muted">Mã phiên sẽ được chuyển sang màn hình nhập kết quả.</p>
+                    <p className="mt-2 text-xs leading-5 text-muted">{session.students.length === 0 ? 'Phiên này chưa có học sinh tham gia nên chưa thể nhập kết quả.' : 'Mã phiên sẽ được chuyển sang màn hình nhập kết quả.'}</p>
                   </div>
                 </div>
               )}

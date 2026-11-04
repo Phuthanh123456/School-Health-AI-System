@@ -68,12 +68,53 @@ bcrypt hashes through PostgreSQL's `pgcrypto` extension. The parent is linked
 to students `DEMO-001` and `DEMO-017`. Rerunning the seed fills in missing demo
 rows and preserves existing rows, including profile edits and password hashes.
 
-The tables live in the `schoolhealth_demo` schema. The US-4.1 nurse selector
-reads the seeded sessions and participant roster from this shared schema; see
-[`docs/checkup-sessions-api.md`](docs/checkup-sessions-api.md) for the response
-contract and stable demo IDs. Nurse authentication/RBAC and saving checkup
-results remain separate stories and must be completed before using non-demo
-student data.
+The tables live in the `schoolhealth_demo` schema. The seed provides data for the Nurse session selector and result-entry flow, as well as the parent and dashboard stories. The selector uses the same seeded sessions and participant rows as the result-entry API. See [`docs/checkup-sessions-api.md`](docs/checkup-sessions-api.md) for its authenticated response contract and stable demo IDs.
+
+## Nurse checkup session selection and result entry
+
+The checkup API uses the seeded `schoolhealth_demo` tables. Apply
+`backend/scripts/migrate_checkup_results.sql` to an existing seeded database
+before starting the updated API. Fresh demo databases receive the same columns
+from `backend/scripts/seed_demo.sql`. The migration adds BMI, vision, and audit
+timestamps while retaining existing demo statuses. The composite primary key
+`(session_id, student_id)` ensures one result per participating student/session.
+
+Checkup routes use HTTP Basic credentials checked against the seeded accounts;
+use the Nurse account and demo password configured when the database was
+seeded. Available routes are:
+
+- `GET /checkups/sessions` ? predefined sessions with class and participant count
+- `GET /checkups/sessions/{session_id}` ? one session with its participating students
+- `GET /checkups/sessions/{session_id}/students?q={name-or-student-code}` ? search/list participants
+- `GET /checkups/sessions/{session_id}/students/{student_id}/result`
+- `PUT /checkups/sessions/{session_id}/students/{student_id}/result`
+
+The participant list derives from existing
+`checkup_results(session_id, student_id)` rows, including pending and absent
+demo rows. The API accepts only the Nurse-selected `Normal` and
+`Needs Follow-up` values and maps them to the existing database values
+`completed` and `follow_up`. BMI is calculated from centimeters and kilograms;
+the UI rounds it to two decimals for display. Session selection does not create
+or schedule sessions.
+
+Example save request:
+
+```http
+PUT /checkups/sessions/DEMO-CURRENT/students/DEMO-001/result
+Authorization: Basic <nurse credentials>
+Content-Type: application/json
+
+{
+  "height_cm": 150,
+  "weight_kg": 42.5,
+  "vision": null,
+  "notes": "Synthetic demo note",
+  "status": "Normal"
+}
+```
+
+The frontend uses `VITE_API_BASE_URL` when set and otherwise calls
+`http://localhost:8000`.
 
 ## Docker integration
 
