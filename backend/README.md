@@ -40,44 +40,36 @@ The basic endpoint tests use FastAPI's test client and never connect to PostgreS
 
 ## Seed TASK-01 demo data
 
-From the repository root, configure the local Compose `.env` and start PostgreSQL
-with `docker compose up -d --wait db`. In PowerShell, set
-`$env:SCHOOLHEALTH_DEMO_PASSWORD` to a demo-only password of at least eight
-characters and at most 72 UTF-8 bytes. Set `$OutputEncoding = [Text.UTF8Encoding]::new($false)`
-to preserve Vietnamese names when piping SQL.
+From the repository root, configure the Compose .env and run
+`docker compose up -d --build api`. Set the local environment variable
+`SCHOOLHEALTH_DEMO_PASSWORD` to a demo-only password of 8–72 UTF-8 bytes.
 
-Run the seed with one command:
+Import the CSV dataset with one command.
 
 ```powershell
-Get-Content -Raw -Encoding UTF8 backend/scripts/seed_demo.sql | docker compose exec -T -e SCHOOLHEALTH_DEMO_PASSWORD db sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+docker compose exec -T -e SCHOOLHEALTH_DEMO_PASSWORD api python -m app.seed_demo
 ```
 
-The script creates 24 fictional students in class 6A1,
-24 health profiles, two checkup sessions, and 48 result rows. Results include
-completed, follow-up, pending, and absent statuses. Pending and absent rows have
-no measurements so dashboards can distinguish them from completed screenings.
+The committed UTF-8 files in `backend/data/` contain 26 fictional students,
+their health profiles, three demo accounts, two checkup sessions, and 48 checkup
+results. The student CSV columns are `id,full_name,class_name,parentid,allergies,medical_notes`.
+It snapshots the current demo data, including two manually added fictional students.
+Every student has a parent ID. Students previously lacking a parent link are
+assigned to the synthetic `parent` account.
 
-| Role | Demo account |
-| --- | --- |
-| Admin | `admin@schoolhealth.example` |
-| Nurse | `nurse@schoolhealth.example` |
-| Parent | `parent@schoolhealth.example` |
-
-The initial accounts share the demo password supplied on the first run and store
-bcrypt hashes through PostgreSQL's `pgcrypto` extension. The parent is linked
-to students `DEMO001` and `DEMO017`. Rerunning the seed fills in missing demo
-rows and preserves existing rows, including profile edits and password hashes.
-The seed also renames the original student IDs `DEMO-001` through `DEMO-024`
-to `DEMO001` through `DEMO024` in one transaction, preserving profiles,
-parent links, and checkup results. If both forms of an ID already exist,
-the transaction stops for manual collision resolution.
+The accounts CSV contains account IDs, emails, and roles. Initial password hashes
+are generated from the locally supplied password using PostgreSQL pgcrypto.
+Rerunning the importer inserts missing records and preserves existing profile
+edits, parent assignments, and password hashes. CSV edits do not overwrite
+existing database records. All inserts run in one transaction.
+After changing CSV files, rebuild the API image before importing.
 
 The seed writes to the application's PostgreSQL `public` schema.
 `GET /students` reads `public.students` and returns each student's `id`,
-`full_name`, and `class_name`, ordered by ID.
+`full_name`, `class_name`, and `parentid`, ordered by ID.
 `POST /students` creates a student and health profile in one transaction. Send
 `id`, `full_name`, and `class_name` as nonblank strings. You can also send
-`allergies` and `medical_notes`. The API returns HTTP 201 on success, 409 if the
+`allergies`, `medical_notes`, and `parentid`. The parent ID must reference an existing account with role parent. Existing callers that omit it use the demo account `parent`. The API returns HTTP 201 on success, 409 if the
 student ID already exists, and 422 if the request fails validation.
 New student IDs must contain 1–50 ASCII letters and digits
 (`A-Z`, `a-z`, `0-9`). The creation form enforces the same format.
@@ -88,7 +80,7 @@ parent links, and checkup results in one transaction. The screen requests
 confirmation before deletion. Rerunning the demo seed recreates missing sample rows.
 `GET /students/{student_id}` returns the student's basic profile.
 `PATCH /students/{student_id}` accepts changes to `full_name`, `class_name`,
-`allergies`, and `medical_notes`. Omitted fields keep their values. Send
+`allergies`, `medical_notes`, and `parentid`. Omitted fields keep their values. Send
 `null` or a blank string to clear allergies or notes. An unknown ID returns 404.
 If you ran the old seed into `schoolhealth_demo`, rerun the command above to
 populate `public`. This creates a new sample dataset in `public` and leaves the

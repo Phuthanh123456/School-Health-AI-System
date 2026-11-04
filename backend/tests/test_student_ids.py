@@ -1,4 +1,6 @@
 import os
+from datetime import date
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -10,7 +12,7 @@ from sqlalchemy.schema import CreateSchema, DropSchema
 
 from app.database import Base, engine as application_engine, get_db
 from app.main import app
-from app.models.student import HealthProfile, Student, parent_students, checkup_results
+from app.models.student import HealthProfile, Student, accounts, checkup_sessions, parent_students, checkup_results
 
 
 @pytest.fixture
@@ -33,8 +35,16 @@ def client():
             execution_options={"schema_translate_map": {"public": None}},
         )
 
-    tables = [Student.__table__, HealthProfile.__table__, parent_students, checkup_results]
+    tables = [accounts, Student.__table__, HealthProfile.__table__, checkup_sessions, parent_students, checkup_results]
     Base.metadata.create_all(engine, tables=tables)
+    with engine.begin() as connection:
+        connection.execute(accounts.insert(), [
+            {"id": "parent", "email": "parent@example.test", "role": "parent", "password_hash": "test"},
+            {"id": "parent2", "email": "parent2@example.test", "role": "parent", "password_hash": "test"},
+        ])
+        connection.execute(checkup_sessions.insert().values(
+            id="session", title="Test", checkup_date=date(2026, 11, 4)
+        ))
 
     def test_db():
         with Session(engine) as db:
@@ -85,7 +95,7 @@ def test_unsafe_id_is_rejected_without_creating_a_student(client, student_id):
 def test_invalid_create_and_update_preserve_data(client, changes):
     original = {
         "id": "QAVALIDATION", "full_name": "Synthetic Student", "class_name": "6A1",
-        "allergies": "Peanuts", "medical_notes": "Original",
+        "allergies": "Peanuts", "medical_notes": "Original", "parentid": "parent",
     }
     invalid_create = client.post("/students", json={**original, **changes})
     assert invalid_create.status_code == 422, invalid_create.text
@@ -99,7 +109,7 @@ def test_invalid_create_and_update_preserve_data(client, changes):
 def test_duplicate_and_partial_updates_preserve_other_fields(client):
     original = {
         "id": "QAPARTIAL", "full_name": "Synthetic Student", "class_name": "6A1",
-        "allergies": "Peanuts", "medical_notes": "Original",
+        "allergies": "Peanuts", "medical_notes": "Original", "parentid": "parent",
     }
     assert client.post("/students", json=original).status_code == 201
     assert client.post("/students", json={**original, "full_name": "Duplicate"}).status_code == 409
@@ -148,8 +158,9 @@ def test_search_and_delete_student_with_dependent_records(client):
     database = app.dependency_overrides[get_db]()
     db = next(database)
     try:
+        db.execute(parent_students.delete().where(parent_students.c.student_id == "DEMO025"))
         db.execute(parent_students.insert().values(parent_id="parent", student_id="DEMO025"))
-        db.execute(checkup_results.insert().values(session_id="session", student_id="DEMO025"))
+        db.execute(checkup_results.insert().values(session_id="session", student_id="DEMO025", status="completed"))
         db.commit()
     finally:
         database.close()
@@ -157,3 +168,40 @@ def test_search_and_delete_student_with_dependent_records(client):
     assert client.get("/students/DEMO025").status_code == 404
     assert client.delete("/students/DEMO025").status_code == 404
     assert client.get("/students/DEMO026").status_code == 200
+
+
+def test_parent_id_can_be_created_and_changed(client):
+    response = client.post("/students", json={
+        "id": "PARENTTEST", "full_name": "Synthetic Student", "class_name": "6A1",
+        "parentid": "parent",
+    })
+    assert response.status_code == 201, response.text
+    assert response.json()["parentid"] == "parent"
+    assert client.patch("/students/PARENTTEST", json={"parentid": "missing"}).status_code == 422
+    assert client.get("/students/PARENTTEST").json()["parentid"] == "parent"
+    response = client.patch("/students/PARENTTEST", json={"parentid": "parent2"})
+    assert response.status_code == 200, response.text
+    assert client.get("/students/PARENTTEST").json()["parentid"] == "parent2"
+
+
+@pytest.mark.skipif(os.getenv("RUN_POSTGRES_TESTS") != "1", reason="CSV accounts use PostgreSQL pgcrypto")
+def test_csv_import_is_repeatable_and_preserves_edits(client, monkeypatch):
+    from app import seed_demo
+
+    database = app.dependency_overrides[get_db]()
+    db = next(database)
+    try:
+        monkeypatch.setattr(seed_demo, "engine", db.get_bind())
+    finally:
+        database.close()
+    folder = Path(seed_demo.__file__).resolve().parent.parent / "data"
+    seed_demo.seed(folder, uuid4().hex)
+    response = client.patch("/students/DEMO001", json={
+        "medical_notes": "Preserved edit", "parentid": "parent2",
+    })
+    assert response.status_code == 200, response.text
+    seed_demo.seed(folder, uuid4().hex)
+    assert len(client.get("/students").json()) == 26
+    profile = client.get("/students/DEMO001").json()
+    assert profile["medical_notes"] == "Preserved edit"
+    assert profile["parentid"] == "parent2"

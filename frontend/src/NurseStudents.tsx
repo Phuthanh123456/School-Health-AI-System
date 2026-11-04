@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 
-type Student = { id: string; full_name: string; class_name: string }
+type Student = { id: string; full_name: string; class_name: string; parentid: string | null }
 type Profile = Student & { allergies: string | null; medical_notes: string | null }
 
 const api = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
@@ -38,11 +38,12 @@ function ProfileForm({ profile, onSaved, onSaving, busy }: {
     const values = {
       full_name: String(fields.get('full_name')).trim(),
       class_name: String(fields.get('class_name')).trim(),
+      parentid: String(fields.get('parentid')).trim(),
       allergies: String(fields.get('allergies')).trim() || null,
       medical_notes: String(fields.get('medical_notes')).trim() || null,
     }
-    if (!id || !values.full_name || !values.class_name) {
-      setError('Nhập mã học sinh, họ tên và lớp.')
+    if (!id || !values.full_name || !values.class_name || !values.parentid) {
+      setError('Nhập mã học sinh, họ tên, lớp và mã phụ huynh.')
       return
     }
     setError('')
@@ -82,6 +83,9 @@ function ProfileForm({ profile, onSaved, onSaving, busy }: {
         </label>
         <label className="text-sm font-semibold">Dị ứng
           <textarea className={inputStyle} name="allergies" defaultValue={profile?.allergies ?? ''} rows={2} maxLength={2000} />
+        </label>
+        <label className="text-sm font-semibold">Mã phụ huynh
+          <input className={inputStyle} name="parentid" defaultValue={profile?.parentid ?? 'parent'} required maxLength={50} />
         </label>
         <label className="text-sm font-semibold">Ghi chú y tế
           <textarea className={inputStyle} name="medical_notes" defaultValue={profile?.medical_notes ?? ''} rows={3} maxLength={2000} />

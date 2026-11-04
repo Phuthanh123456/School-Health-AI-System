@@ -1,22 +1,35 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.student import HealthProfile, Student, checkup_results, parent_students
+from app.models.student import HealthProfile, Student, accounts, checkup_results, parent_students
 from app.schemas.student import StudentCreate, StudentProfile, StudentSummary, StudentUpdate
 
 
 router = APIRouter(prefix="/students", tags=["students"])
 
+parent_id_query = (
+    select(func.min(parent_students.c.parent_id))
+    .where(parent_students.c.student_id == Student.id)
+    .correlate(Student).scalar_subquery().label("parentid")
+)
+
+
+def validate_parent(db: Session, parentid: str) -> None:
+    if db.scalar(select(accounts.c.id).where(
+        accounts.c.id == parentid, accounts.c.role == "parent"
+    )) is None:
+        raise HTTPException(status_code=422, detail="Parent account does not exist")
+
 
 def read_profile(db: Session, student_id: str) -> StudentProfile:
     row = db.execute(
         select(Student.id, Student.full_name, Student.class_name,
-               HealthProfile.allergies, HealthProfile.medical_notes)
+               HealthProfile.allergies, HealthProfile.medical_notes, parent_id_query)
         .outerjoin(HealthProfile, HealthProfile.student_id == Student.id)
         .where(Student.id == student_id)
     ).mappings().one_or_none()
@@ -30,10 +43,10 @@ def list_students(
     db: Annotated[Session, Depends(get_db)],
     student_id: Annotated[str | None, Query(max_length=50)] = None,
 ) -> list[StudentSummary]:
-    query = select(Student).order_by(Student.id)
+    query = select(Student.id, Student.full_name, Student.class_name, parent_id_query).order_by(Student.id)
     if student_id and student_id.strip():
         query = query.where(Student.id.icontains(student_id.strip(), autoescape=True))
-    students = db.scalars(query)
+    students = db.execute(query).mappings()
     return [StudentSummary.model_validate(student) for student in students]
 
 
@@ -47,6 +60,7 @@ def create_student(
         medical_notes=student.medical_notes or None,
     )
     with db.begin():
+        validate_parent(db, student.parentid)
         new_id = db.scalar(
             insert(Student)
             .values(id=profile.id, full_name=profile.full_name, class_name=profile.class_name)
@@ -62,6 +76,7 @@ def create_student(
                 medical_notes=profile.medical_notes,
             )
         )
+        db.execute(insert(parent_students).values(parent_id=student.parentid, student_id=new_id))
     return profile
 
 
@@ -79,6 +94,12 @@ def update_student(
         student = db.get(Student, student_id, with_for_update=True)
         if student is None:
             raise HTTPException(status_code=404, detail="Student not found")
+
+        if "parentid" in changes:
+            parentid = changes.pop("parentid")
+            validate_parent(db, parentid)
+            db.execute(delete(parent_students).where(parent_students.c.student_id == student_id))
+            db.execute(insert(parent_students).values(parent_id=parentid, student_id=student_id))
 
         for field in ("full_name", "class_name"):
             if field in changes:

@@ -1,0 +1,4 @@
+id,email,role
+admin,admin@schoolhealth.example,admin
+nurse,nurse@schoolhealth.example,nurse
+parent,parent@schoolhealth.example,parent
