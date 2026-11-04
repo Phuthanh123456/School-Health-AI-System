@@ -20,7 +20,7 @@ async function login(page: Page, role: 'parent' | 'admin' | 'nurse') {
   await page.addInitScript(() => sessionStorage.setItem('schoolhealth.auth-session', JSON.stringify({ accessToken: 'valid-test-session', expiresAt: Date.now() + 3600000 })))
   await page.route('**/auth/me', route => route.fulfill({
     status: route.request().method() === 'OPTIONS' ? 204 : 200,
-    headers: { 'Access-Control-Allow-Origin': 'http://127.0.0.1:5175', 'Access-Control-Allow-Headers': 'authorization,content-type', 'Access-Control-Allow-Methods': 'GET,OPTIONS' },
+    headers: { 'Access-Control-Allow-Origin': route.request().headers().origin || '*' , 'Access-Control-Allow-Headers': 'authorization,content-type', 'Access-Control-Allow-Methods': 'GET,OPTIONS' },
     ...(route.request().method() === 'OPTIONS' ? {} : { json: { id: role === 'parent' ? parent1.id : role, email: `${role}@schoolhealth.example`, role } }),
   }))
 }
@@ -36,6 +36,26 @@ async function adminData(page: Page, state: HealthRecord[]) {
     return route.fulfill({ json: { items: items.slice((page - 1) * pageSize, page * pageSize), total: items.length, page, page_size: pageSize } })
   })
 }
+
+test('Admin can navigate from management to overview and generate insights for record totals above student totals', async ({ page }) => {
+  await login(page, 'admin')
+  await adminData(page, [])
+  await page.route('**/api/admin/dashboard', route => route.fulfill({ json: {
+    total_students: 24, completed_checkups: 41, status_counts: { normal: 33, needs_follow_up: 8 },
+  } }))
+  await page.route('**/api/admin/ai-insights', route => {
+    expect(route.request().postDataJSON()).toEqual({ total_students: 24, checkups_completed: 41, followups_pending: 8 })
+    return route.fulfill({ json: {
+      summary: '41 saved checkup records across sessions.', recommendations: ['Review school resources.'], disclaimer: 'Informational only.',
+      aggregates: { total_students: 24, checkups_completed: 41, followups_pending: 8 },
+    } })
+  })
+  await page.goto('/admin')
+  await page.getByRole('link', { name: 'School overview & AI insights' }).click()
+  await expect(page.getByLabel('41 completed checkups')).toBeVisible()
+  await page.getByRole('button', { name: 'Generate AI Insights' }).click()
+  await expect(page.getByText('41 saved checkup records across sessions.')).toBeVisible()
+})
 
 test('Parent sees their profile and multiple linked children with history', async ({ page }) => {
   await login(page, 'parent')

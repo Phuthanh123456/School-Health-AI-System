@@ -15,6 +15,10 @@ export function RoleWorkspace({ role, title, description, children }: {
         <div className="flex items-center gap-3"><span className="rounded-full bg-primary-soft px-3 py-2 text-xs font-bold">{role}</span>
           <button type="button" className={secondaryButton} onClick={() => { signOut(); window.location.assign('/login') }}>Sign out</button></div>
       </header>
+      {role === 'Admin' && <nav aria-label="Admin sections" className="flex flex-wrap gap-3 border-b border-border py-4">
+        <a className={secondaryButton} href="/admin">Health management</a>
+        <a className={secondaryButton} href="/admin/overview">School overview &amp; AI insights</a>
+      </nav>}
       <div className="py-8"><h1 className="font-display text-3xl font-bold sm:text-4xl">{title}</h1><p className="mt-3 max-w-3xl leading-7 text-muted">{description}</p></div>
       {children}
     </div>
@@ -32,4 +36,3 @@ export function StatusBadge({ status }: { status: string }) {
   const style = status === 'Normal' ? 'bg-sky-100 text-sky-900' : status === 'Needs Follow-up' ? 'bg-amber-100 text-amber-950' : 'bg-slate-100 text-slate-700'
   return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${style}`}>{status}</span>
 }
-

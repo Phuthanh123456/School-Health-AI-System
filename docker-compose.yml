@@ -8,7 +8,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:?Set AUTH_TOKEN_SECRET in .env}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5174,http://127.0.0.1:5174}
-      INSIGHTS_ADMIN_TOKEN: ${INSIGHTS_ADMIN_TOKEN:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-https://ollama.com/v1}
       LLM_MODEL: ${LLM_MODEL:-gpt-oss:20b}
       LLM_API_KEY: ${LLM_API_KEY:-}

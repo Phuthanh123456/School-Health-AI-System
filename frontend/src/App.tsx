@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import AdminHealthManagement from './AdminHealthManagement'
 import AdminDashboard from './AdminDashboard'
-import AIInsightsPreview from './AIInsightsPreview'
 import ParentDashboard from './ParentDashboard'
 import LoginPage from './LoginPage'
 import NurseStudents from './NurseStudents'
@@ -254,7 +253,7 @@ function ProtectedRoute({ role, insights = false, overview = false }: { role: Us
   }
 
   if (status !== 'authenticated') return null
-  if (role === 'admin' && insights) return <AIInsightsPreview />
+  if (role === 'admin' && insights) return <AdminDashboard />
   if (role === 'admin' && overview) return <AdminDashboard />
   if (role === 'nurse') return <NurseWorkspace />
   return <RoleLandingPage role={role} />
@@ -299,6 +298,8 @@ function NurseWorkspace() {
 
 function App() {
   const pathname = window.location.pathname.replace(/\/$/, '')
+
+  if (pathname === '' && window.location.hash === '#admin') return <ProtectedRoute role="admin" overview />
 
   if (pathname === '/login') {
     return (

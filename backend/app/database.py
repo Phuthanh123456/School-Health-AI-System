@@ -1,6 +1,7 @@
 """SQLAlchemy database setup. Importing this module never opens a connection."""
 
 from collections.abc import Generator
+from fastapi import HTTPException
 
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
@@ -28,7 +29,7 @@ SessionLocal = sessionmaker(autoflush=False, autocommit=False, expire_on_commit=
 def get_db() -> Generator[Session, None, None]:
     """Yield a database session, failing clearly if DATABASE_URL is missing."""
     if engine is None:
-        raise RuntimeError("DATABASE_URL must be set before using database endpoints")
+        raise HTTPException(503, "Database is not configured.")
 
     db = SessionLocal(bind=engine)
     try:

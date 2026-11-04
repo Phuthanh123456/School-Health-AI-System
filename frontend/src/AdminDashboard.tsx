@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { getAccessToken, signOut } from './auth'
+import { authenticatedFetch, getAccessToken, signOut } from './auth'
+import AIInsightsPanel from './AIInsightsPanel'
 
 const StatusDistributionChart = lazy(() => import('./StatusDistributionChart'))
 
@@ -72,8 +73,9 @@ export default function AdminDashboard() {
       return () => controller.abort()
     }
 
-    fetch('/api/admin/dashboard', {
-      headers: { Authorization: `Bearer ${token}` },
+    let timedOut = false
+    const timer = window.setTimeout(() => { timedOut = true; controller.abort() }, 15000)
+    authenticatedFetch('/api/admin/dashboard', {
       signal: controller.signal,
     })
       .then(async (response) => {
@@ -83,17 +85,19 @@ export default function AdminDashboard() {
         if (active) setOverview(data)
       })
       .catch((failure: unknown) => {
-        if (!active || controller.signal.aborted) return
-        setError(failure instanceof Error
+        if (!active || (controller.signal.aborted && !timedOut)) return
+        setError(timedOut ? 'The school overview request timed out. Please try again.' : failure instanceof Error
           ? failure.message
           : 'The school overview could not be loaded. Try again.')
       })
       .finally(() => {
+        window.clearTimeout(timer)
         if (active) setLoading(false)
       })
 
     return () => {
       active = false
+      window.clearTimeout(timer)
       controller.abort()
     }
   }, [reload, token])
@@ -123,6 +127,10 @@ export default function AdminDashboard() {
             </button>
           </div>
         </header>
+        <nav aria-label="Admin sections" className="flex flex-wrap gap-3 border-b border-border py-4 text-sm font-semibold">
+          <a href="/admin" className="min-h-11 rounded-xl border border-border bg-white px-4 py-3">Health management</a>
+          <a href="/admin/overview" aria-current="page" className="min-h-11 rounded-xl bg-primary-soft px-4 py-3">School overview &amp; AI insights</a>
+        </nav>
 
         <section className="py-8 sm:py-10" aria-labelledby="overview-title">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-strong">School health</p>
@@ -169,6 +177,11 @@ export default function AdminDashboard() {
               <MetricCard label="Needs follow-up" value={overview.status_counts.needs_follow_up} detail="Records with a Nurse-selected follow-up status" accent="bg-amber-500" />
             </section>
 
+            <div className="mt-6"><AIInsightsPanel key={reload} stats={{
+              total_students: overview.total_students,
+              checkups_completed: overview.completed_checkups,
+              followups_pending: overview.status_counts.needs_follow_up,
+            }} /></div>
             <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)]">
               <article className="rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
                 <div>

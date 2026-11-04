@@ -73,7 +73,7 @@ jobs:
         env:
           RUN_POSTGRES_TESTS: "1"
           DATABASE_URL: postgresql+psycopg://schoolhealth_ci:schoolhealth_ci@localhost:5432/schoolhealth_ci
-        run: python -m pytest -q tests/test_management_postgres.py
+        run: python -m pytest -q tests/test_management_postgres.py tests/test_insights.py
 
   frontend-checks:
     name: Frontend checks and Playwright

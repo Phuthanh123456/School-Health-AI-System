@@ -96,7 +96,7 @@ Open `http://localhost:5174`. Demo accounts use the same password from `SCHOOLHE
 | Dedicated Parent | `parent001@schoolhealth.example` (through parent024) |
 | Dedicated Nurse | `nurse001@schoolhealth.example`, `nurse002@schoolhealth.example` |
 
-The database is reachable by Compose services at `db:5432`; the API is available on `http://localhost:8001`. PostgreSQL data stays in the named Compose volume. For AI-generated insights, configure `LLM_API_KEY` and `INSIGHTS_ADMIN_TOKEN` in `.env`, then restart with `docker compose up -d --force-recreate api`.
+The database is reachable by Compose services at `db:5432`; the API is available on `http://localhost:8001`. PostgreSQL data stays in the named Compose volume. For AI-generated insights, configure `LLM_API_KEY` in `.env`, then restart with `docker compose up -d --force-recreate api`.
 
 ## Testing and CI
 
@@ -106,7 +106,7 @@ After login, Parents open `/parent` to view their own profile and linked childre
 
 The US-5.2 database-backed school overview is available to Admins at `/admin/overview`. It shows distinct students, saved student/session checkup records, Nurse-selected status counts and a status distribution chart. The status table and cards use the same optional metrics from the seeded dataset; no diagnosis is inferred from free-text notes.
 
-The seed now imports Zen's fictional CSVs into the shared `schoolhealth_demo` schema. It preserves saved edits and explicit Admin assignment removals when re-run. The historical AI preview remains at `/admin/insights`; its server-side provider configuration and temporary credential gate are documented in [US-6.1](docs/US-6.1.md).
+The seed now imports Zen's fictional CSVs into the shared `schoolhealth_demo` schema. It preserves saved edits and explicit Admin assignment removals when re-run. School-wide AI insights are integrated into `/admin/overview`; `/admin/insights` opens the same protected dashboard. The shared signed Admin session is used; no extra preview credential is needed. See [US-6.1](docs/US-6.1.md).
 
 The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on pushes, pull requests, and manual dispatch. It:
 
