@@ -1,3 +1,35 @@
+import { useEffect, useState } from 'react'
+
+import CheckupSessionsPage from './pages/CheckupSessionsPage'
+
+type AppRoute =
+  | { kind: 'home' }
+  | { kind: 'checkup-sessions'; selectedSessionId: string | null }
+  | { kind: 'result-entry'; sessionId: string }
+
+function decodeRouteValue(value: string): string {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+function readRoute(): AppRoute {
+  const hashPath = window.location.hash.slice(1).split('?')[0] ?? ''
+  const segments = hashPath.split('/').filter(Boolean)
+
+  if (segments[0] === 'checkup-sessions') {
+    const sessionId = segments[1] ? decodeRouteValue(segments[1]) : null
+    if (sessionId && segments[2] === 'results') {
+      return { kind: 'result-entry', sessionId }
+    }
+    return { kind: 'checkup-sessions', selectedSessionId: sessionId }
+  }
+
+  return { kind: 'home' }
+}
+
 const features = [
   {
     number: '01',
@@ -34,6 +66,51 @@ function ArrowIcon() {
 }
 
 function App() {
+  const [route, setRoute] = useState<AppRoute>(readRoute)
+
+  useEffect(() => {
+    const handleHashChange = () => setRoute(readRoute())
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  if (route.kind === 'checkup-sessions') {
+    return (
+      <CheckupSessionsPage
+        selectedSessionId={route.selectedSessionId}
+        onBackHome={() => { window.location.hash = '#home' }}
+        onSelectSession={(sessionId) => {
+          window.location.hash = sessionId
+            ? `#/checkup-sessions/${encodeURIComponent(sessionId)}`
+            : '#/checkup-sessions'
+        }}
+        onContinueToResults={(sessionId) => {
+          window.location.hash = `#/checkup-sessions/${encodeURIComponent(sessionId)}/results`
+        }}
+      />
+    )
+  }
+
+  if (route.kind === 'result-entry') {
+    return (
+      <main className="grid min-h-screen place-items-center bg-background px-4 py-12 text-foreground">
+        <section className="w-full max-w-xl rounded-2xl border border-border bg-white p-6 sm:p-8" aria-labelledby="result-entry-handoff-title">
+          <p className="text-xs font-bold tracking-[0.14em] text-primary-strong">BÀN GIAO TỪ US-4.1</p>
+          <h1 id="result-entry-handoff-title" className="mt-3 font-display text-2xl font-bold">Nhập kết quả khám</h1>
+          <p className="mt-3 text-sm leading-6 text-muted">
+            Màn hình nhập và lưu kết quả thuộc SCRUM-40 (US-4.2). Phiên được chọn đã được chuyển qua URL để phần đó tích hợp.
+          </p>
+          <p className="mt-5 rounded-xl bg-background px-4 py-3 text-sm">
+            Mã phiên: <code className="font-bold text-foreground">{route.sessionId}</code>
+          </p>
+          <a href={`#/checkup-sessions/${encodeURIComponent(route.sessionId)}`} className="mt-6 inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm font-semibold transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+            Quay lại phiên khám
+          </a>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-background text-foreground">
       <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-6 sm:px-10">
@@ -49,8 +126,8 @@ function App() {
           <span className="hidden rounded-full border border-border bg-white/80 px-4 py-2 text-xs font-semibold tracking-wide text-muted sm:block">
             SỨC KHỎE HỌC ĐƯỜNG, ĐƯỢC KẾT NỐI
           </span>
-          <a href="#features" className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2.5 text-sm font-semibold transition duration-200 hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-            Bắt đầu khám phá <ArrowIcon />
+          <a href="#/checkup-sessions" className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2.5 text-sm font-semibold transition duration-200 hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+            Xem đợt khám <ArrowIcon />
           </a>
         </header>
 

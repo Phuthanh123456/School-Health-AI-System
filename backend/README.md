@@ -68,10 +68,12 @@ bcrypt hashes through PostgreSQL's `pgcrypto` extension. The parent is linked
 to students `DEMO-001` and `DEMO-017`. Rerunning the seed fills in missing demo
 rows and preserves existing rows, including profile edits and password hashes.
 
-The tables live in the `schoolhealth_demo` schema. The seed provides the data for
-the login, parent visibility, Nurse entry, and dashboard stories. Those flows
-still need application models and endpoints wired to the demo tables, or seed
-data migrated into the team's application schema once it is agreed.
+The tables live in the `schoolhealth_demo` schema. The US-4.1 nurse selector
+reads the seeded sessions and participant roster from this shared schema; see
+[`docs/checkup-sessions-api.md`](docs/checkup-sessions-api.md) for the response
+contract and stable demo IDs. Nurse authentication/RBAC and saving checkup
+results remain separate stories and must be completed before using non-demo
+student data.
 
 ## Docker integration
 

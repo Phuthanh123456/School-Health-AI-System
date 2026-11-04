@@ -2,7 +2,10 @@
 
 from fastapi import APIRouter
 
+from app.api.routes.checkup_sessions import router as checkup_sessions_router
+
 api_router = APIRouter()
+api_router.include_router(checkup_sessions_router)
 
 
 @api_router.get("/", tags=["system"], summary="API welcome")
