@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
+import AdminHealthManagement from './AdminHealthManagement'
+import AdminDashboard from './AdminDashboard'
+import ParentDashboard from './ParentDashboard'
 import LoginPage from './LoginPage'
 import NurseStudents from './NurseStudents'
+import { NurseCheckupEntry } from './NurseCheckupEntry'
 import { restoreSession, roleLandingPaths, signIn, signOut, type UserRole } from './auth'
 
 const features = [
@@ -38,41 +42,8 @@ function ArrowIcon() {
   return <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="ml-2 size-4"><path d="M4 10h11M10 5l5 5-5 5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
 }
 
-const roleLandingContent: Record<Exclude<UserRole, 'nurse'>, { title: string; description: string }> = {
-  admin: {
-    title: 'Administrator workspace',
-    description: 'Your role-specific dashboard will appear here as its features are added.',
-  },
-  parent: {
-    title: 'Parent workspace',
-    description: 'Your role-specific health overview will appear here as its features are added.',
-  },
-}
-
 function RoleLandingPage({ role }: { role: Exclude<UserRole, 'nurse'> }) {
-  const content = roleLandingContent[role]
-
-  function handleSignOut() {
-    signOut()
-    window.location.assign('/')
-  }
-
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-6 py-12 text-foreground">
-      <section className="w-full max-w-xl rounded-3xl border border-border bg-white p-8 shadow-sm sm:p-10">
-        <p className="text-sm font-semibold uppercase tracking-wide text-primary-strong">SchoolHealth</p>
-        <h1 className="mt-4 font-display text-3xl font-bold tracking-tight">{content.title}</h1>
-        <p className="mt-3 leading-7 text-muted">{content.description}</p>
-        <button
-          type="button"
-          onClick={handleSignOut}
-          className="mt-8 inline-flex min-h-11 items-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition hover:bg-sky-mid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-        >
-          Sign out
-        </button>
-      </section>
-    </main>
-  )
+  return role === 'admin' ? <AdminHealthManagement /> : <ParentDashboard />
 }
 
 function LandingPage() {
@@ -204,7 +175,7 @@ function LandingPage() {
   )
 }
 
-function ProtectedRoute({ role }: { role: UserRole }) {
+function ProtectedRoute({ role, insights = false }: { role: UserRole; insights?: boolean }) {
   const [status, setStatus] = useState<'checking' | 'authenticated' | 'unavailable'>('checking')
   const [retry, setRetry] = useState(0)
 
@@ -282,8 +253,46 @@ function ProtectedRoute({ role }: { role: UserRole }) {
   }
 
   if (status !== 'authenticated') return null
-  if (role === 'nurse') return <NurseStudents />
+  if (role === 'admin' && insights) return <AdminDashboard />
+  if (role === 'nurse') return <NurseWorkspace />
   return <RoleLandingPage role={role} />
+}
+
+type NurseRoute =
+  | { kind: 'nurse-entry' }
+  | { kind: 'checkup-sessions'; selectedSessionId: string | null }
+  | { kind: 'result-entry'; sessionId: string | null }
+
+function NurseWorkspace() {
+  const [section, setSection] = useState<'profiles' | 'checkups'>('profiles')
+  const [route, setRoute] = useState<NurseRoute>({ kind: 'nurse-entry' })
+
+  if (section === 'checkups') {
+    return (
+      <>
+        <nav className="flex flex-wrap gap-3 border-b border-border bg-white px-6 py-4">
+          <button type="button" onClick={() => setSection('profiles')} className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:border-primary">Student profiles</button>
+          <span className="rounded-full bg-primary-soft px-4 py-2 text-sm font-semibold text-primary-strong">Checkup sessions and results</span>
+        </nav>
+        <NurseCheckupEntry
+          route={route}
+          onClose={() => setSection('profiles')}
+          onSelectSession={(sessionId) => setRoute({ kind: 'checkup-sessions', selectedSessionId: sessionId })}
+          onContinueToResults={(sessionId) => setRoute({ kind: 'result-entry', sessionId })}
+        />
+      </>
+    )
+  }
+
+  return (
+    <>
+      <nav className="flex flex-wrap gap-3 border-b border-border bg-white px-6 py-4">
+        <span className="rounded-full bg-primary-soft px-4 py-2 text-sm font-semibold text-primary-strong">Student profiles</span>
+        <button type="button" onClick={() => { setRoute({ kind: 'nurse-entry' }); setSection('checkups') }} className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:border-primary">Checkup sessions and results</button>
+      </nav>
+      <NurseStudents />
+    </>
+  )
 }
 
 function App() {
@@ -301,6 +310,7 @@ function App() {
   }
   if (pathname === '/nurse') return <ProtectedRoute role="nurse" />
   if (pathname === '/admin') return <ProtectedRoute role="admin" />
+  if (pathname === '/admin/insights') return <ProtectedRoute role="admin" insights />
   if (pathname === '/parent') return <ProtectedRoute role="parent" />
 
   return <LandingPage />

@@ -1,17 +1,16 @@
-"""Environment based application configuration."""
+﻿"""Environment based application configuration."""
 
 import os
 
 from dotenv import load_dotenv
 from sqlalchemy import URL
 
-
 load_dotenv()
 
 
 def _parse_origins(value: str | None) -> list[str]:
     if not value:
-        return ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
+        return ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173", "http://127.0.0.1:5174"]
     return [origin.strip() for origin in value.split(",") if origin.strip()]
 
 
@@ -29,6 +28,10 @@ class Settings:
                 username=os.environ["POSTGRES_USER"],
                 password=os.environ["POSTGRES_PASSWORD"],
             )
+        self.insights_admin_token = os.getenv("INSIGHTS_ADMIN_TOKEN", "")
+        self.llm_base_url = os.getenv("LLM_BASE_URL", "")
+        self.llm_model = os.getenv("LLM_MODEL", "")
+        self.llm_api_key = os.getenv("LLM_API_KEY", "")
         self.cors_origins: list[str] = _parse_origins(os.getenv("CORS_ORIGINS"))
         self.auth_token_secret = os.getenv("AUTH_TOKEN_SECRET") or None
         self.auth_token_issuer = os.getenv("AUTH_TOKEN_ISSUER", "schoolhealth-api")

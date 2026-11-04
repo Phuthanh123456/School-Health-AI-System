@@ -187,6 +187,16 @@ export async function restoreSession(): Promise<RestoredSession | null> {
   return { user, expiresAt: parsedSession.expiresAt }
 }
 
+export function getAccessToken(): string | null {
+  try {
+    const raw = sessionStorage.getItem(sessionKey)
+    const session: unknown = raw ? JSON.parse(raw) : null
+    return isStoredSession(session) && session.expiresAt > Date.now() ? session.accessToken : null
+  } catch {
+    return null
+  }
+}
+
 export function signOut(): void {
   try {
     sessionStorage.removeItem(sessionKey)
