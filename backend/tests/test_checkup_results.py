@@ -163,6 +163,27 @@ def test_only_nurse_account_can_write(client: TestClient) -> None:
     assert nurse.status_code == 200
 
 
+def test_existing_bearer_session_can_access_checkups_and_enforces_current_role(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.schemas.auth import AuthenticatedUser
+
+    app.dependency_overrides.pop(require_nurse)
+    monkeypatch.setattr(
+        "app.auth.decode_access_token",
+        lambda _token: AuthenticatedUser(id="nurse", email="nurse@example.test", role="nurse"),
+    )
+    nurse = client.get("/checkups/sessions", headers={"Authorization": "Bearer nurse-token"})
+    assert nurse.status_code == 200
+
+    monkeypatch.setattr(
+        "app.auth.decode_access_token",
+        lambda _token: AuthenticatedUser(id="parent", email="parent@example.test", role="parent"),
+    )
+    parent = client.get("/checkups/sessions", headers={"Authorization": "Bearer parent-token"})
+    assert parent.status_code == 403
+
+
 def test_session_list_and_detail_share_the_result_participant_schema(client: TestClient, db_factory: sessionmaker[Session]) -> None:
     with db_factory() as db:
         db.add(CheckupSession(id="EMPTY", title="Empty session", checkup_date=date(2026, 12, 1)))

@@ -3,20 +3,46 @@
 import secrets
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBasic, HTTPBearer, HTTPBasicCredentials
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.checkup import Account
+from app.services.auth import decode_access_token
 
-basic_auth = HTTPBasic()
+basic_auth = HTTPBasic(auto_error=False)
+bearer_auth = HTTPBearer(auto_error=False)
 
 
 def require_nurse(
-    credentials: HTTPBasicCredentials = Depends(basic_auth),
+    credentials: HTTPBasicCredentials | None = Depends(basic_auth),
+    token: HTTPAuthorizationCredentials | None = Depends(bearer_auth),
     db: Session = Depends(get_db),
 ) -> str:
+    if token is not None and token.scheme.casefold() == "bearer":
+        user = decode_access_token(token.credentials)
+        if not secrets.compare_digest(user.role, "nurse"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only Nurse accounts can access checkup records.",
+            )
+        account = db.scalar(select(Account).where(Account.id == user.id, Account.role == "nurse"))
+        if account is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Nurse account is unavailable. Please sign in again.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return account.id
+
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Valid Nurse credentials are required.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     account = db.scalar(
         select(Account).where(
             or_(Account.id == credentials.username, Account.email == credentials.username)

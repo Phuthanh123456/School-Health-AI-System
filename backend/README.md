@@ -70,9 +70,10 @@ from the ORM schema used by `python -m app.seed_demo`. The migration adds BMI, v
 timestamps while retaining existing demo statuses. The composite primary key
 `(session_id, student_id)` ensures one result per participating student/session.
 
-Checkup routes use HTTP Basic credentials checked against the seeded accounts;
-use the Nurse account and demo password configured when the database was
-seeded. Available routes are:
+Checkup routes accept the Bearer token issued by `/auth/login`; the Nurse
+workspace reuses the signed-in session and loads sessions automatically. HTTP
+Basic credentials remain supported for existing API clients. The current
+account role is checked against the database on every request. Available routes are:
 
 - `GET /checkups/sessions` ? predefined sessions with class and participant count
 - `GET /checkups/sessions/{session_id}` ? one session with its participating students
@@ -92,7 +93,7 @@ Example save request:
 
 ```http
 PUT /checkups/sessions/DEMO-CURRENT/students/DEMO001/result
-Authorization: Basic <nurse credentials>
+Authorization: Bearer <access token from /auth/login>
 Content-Type: application/json
 
 {
