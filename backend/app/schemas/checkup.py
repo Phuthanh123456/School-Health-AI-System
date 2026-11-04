@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -31,8 +32,9 @@ class SessionDetailRead(SessionRead):
 class ResultWrite(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    height_cm: float = Field(gt=0, allow_inf_nan=False)
-    weight_kg: float = Field(gt=0, allow_inf_nan=False)
+    # Match NUMERIC(5, 1) / NUMERIC(4, 1); reject values the DB would round.
+    height_cm: Decimal = Field(gt=0, le=Decimal("9999.9"), max_digits=5, decimal_places=1, allow_inf_nan=False)
+    weight_kg: Decimal = Field(gt=0, le=Decimal("999.9"), max_digits=4, decimal_places=1, allow_inf_nan=False)
     vision: str | None = Field(default=None, max_length=2000)
     notes: str | None = Field(default=None, max_length=5000)
     status: FollowUpStatus

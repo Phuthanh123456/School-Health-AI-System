@@ -31,7 +31,9 @@ def calculate_bmi(height_cm: Decimal | float, weight_kg: Decimal | float) -> Dec
 def _result_read(result: CheckupResult) -> ResultRead:
     height = float(result.height_cm)
     weight = float(result.weight_kg)
-    bmi = float(result.bmi) if result.bmi is not None else float(calculate_bmi(height, weight))
+    # Historical rows may contain BMI calculated before the DB rounded measurements.
+    # Always derive the public BMI from the actual stored measurements.
+    bmi = float(calculate_bmi(result.height_cm, result.weight_kg).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP))
     return ResultRead(
         session_id=result.session_id,
         student_id=result.student_id,
@@ -175,8 +177,8 @@ def save_result(
 ) -> ResultRead:
     # Validate IDs and participation before mutating the existing row.
     result = _require_participation(db, session_id, student_id)
-    height = Decimal(str(payload.height_cm))
-    weight = Decimal(str(payload.weight_kg))
+    height = payload.height_cm
+    weight = payload.weight_kg
     bmi = calculate_bmi(height, weight).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
 
     result.height_cm = height

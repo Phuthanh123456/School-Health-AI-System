@@ -14,5 +14,6 @@ ALTER TABLE schoolhealth_demo.checkup_results
 
 UPDATE schoolhealth_demo.checkup_results
 SET bmi = round(weight_kg / power(height_cm / 100, 2), 6), updated_at = now()
-WHERE bmi IS NULL AND height_cm > 0 AND weight_kg > 0;
+WHERE height_cm > 0 AND weight_kg > 0
+  AND bmi IS DISTINCT FROM round(weight_kg / power(height_cm / 100, 2), 6);
 COMMIT;

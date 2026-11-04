@@ -80,7 +80,7 @@ def test_search_matches_name_and_student_code_and_only_returns_participants(clie
 def test_existing_result_can_be_reopened(client: TestClient) -> None:
     response = client.get("/checkups/sessions/SESSION-A/students/STU-001/result")
     assert response.status_code == 200
-    assert response.json()["bmi"] == pytest.approx(17.778)
+    assert response.json()["bmi"] == pytest.approx(17.777778)
     assert response.json()["status"] == "Normal"
 
 
@@ -161,3 +161,83 @@ def test_only_nurse_account_can_write(client: TestClient) -> None:
     assert unauthorized.status_code == 401
     assert parent.status_code == 401
     assert nurse.status_code == 200
+
+
+def test_session_list_and_detail_share_the_result_participant_schema(client: TestClient, db_factory: sessionmaker[Session]) -> None:
+    with db_factory() as db:
+        db.add(CheckupSession(id="EMPTY", title="Empty session", checkup_date=date(2026, 12, 1)))
+        db.commit()
+
+    sessions = client.get("/checkups/sessions").json()
+    populated = next(item for item in sessions if item["id"] == "SESSION-A")
+    empty = next(item for item in sessions if item["id"] == "EMPTY")
+    detail = client.get("/checkups/sessions/SESSION-A").json()
+    empty_detail = client.get("/checkups/sessions/EMPTY").json()
+
+    assert populated["class_name"] == "6A"
+    assert populated["participant_count"] == 2
+    assert {student["id"] for student in detail["students"]} == {"STU-001", "STU-002"}
+    assert detail["participant_count"] == 2
+    assert empty["class_name"] is None and empty["participant_count"] == 0
+    assert empty_detail["students"] == [] and empty_detail["participant_count"] == 0
+
+
+def test_result_bmi_is_derived_from_the_stored_measurements(client: TestClient, db_factory: sessionmaker[Session]) -> None:
+    with db_factory() as db:
+        result = db.get(CheckupResult, ("SESSION-A", "STU-001"))
+        assert result is not None
+        result.bmi = Decimal("99.000000")
+        db.commit()
+
+    response = client.get("/checkups/sessions/SESSION-A/students/STU-001/result")
+
+    assert response.status_code == 200
+    assert response.json()["height_cm"] == 150.0
+    assert response.json()["weight_kg"] == 40.0
+    assert response.json()["bmi"] == pytest.approx(17.777778)
+
+
+def test_valid_measurements_keep_database_precision_and_matching_bmi(client: TestClient, db_factory: sessionmaker[Session]) -> None:
+    response = client.put(
+        "/checkups/sessions/SESSION-A/students/STU-001/result",
+        json={"height_cm": 150.0, "weight_kg": 40.1, "status": "Normal"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["weight_kg"] == 40.1
+    assert response.json()["bmi"] == pytest.approx(17.822222)
+    with db_factory() as db:
+        result = db.get(CheckupResult, ("SESSION-A", "STU-001"))
+        assert result is not None
+        assert result.height_cm == Decimal("150.0")
+        assert result.weight_kg == Decimal("40.1")
+        assert result.bmi == Decimal("17.822222")
+
+
+@pytest.mark.parametrize(
+    "height_cm,weight_kg",
+    [
+        (150, 40.04),
+        (150, 1000),
+        (10000, 40),
+        ("1e1000", 40),
+    ],
+)
+def test_measurements_outside_database_precision_are_rejected_before_write(
+    client: TestClient,
+    db_factory: sessionmaker[Session],
+    height_cm: int | float | str,
+    weight_kg: int | float,
+) -> None:
+    response = client.put(
+        "/checkups/sessions/SESSION-A/students/STU-001/result",
+        json={"height_cm": height_cm, "weight_kg": weight_kg, "status": "Normal"},
+    )
+
+    assert response.status_code == 422
+    with db_factory() as db:
+        result = db.get(CheckupResult, ("SESSION-A", "STU-001"))
+        assert result is not None
+        assert result.height_cm == Decimal("150.0")
+        assert result.weight_kg == Decimal("40.0")
+        assert result.status == "completed"
