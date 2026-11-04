@@ -2,7 +2,7 @@
 
 SchoolHealth is a web-based school health management platform for students, families, and school health teams. It is designed to keep student health records organized, make checkup results easier to follow, and support coordinated care over time.
 
-> **Project status:** Development demo. Login, role-specific screens, student profiles, checkup sessions/results, demo data, and an AI insights preview are available. Some integrations still require local configuration.
+> **Project status:** Development demo. Login, role-specific screens, student profiles, checkup sessions/results, synthetic demo data, and the Admin school health overview are available. Some integrations still require local configuration.
 
 ## Product goals
 
@@ -82,7 +82,7 @@ From the repository root, create the local environment file once, then start the
 
 ```powershell
 Copy-Item .env.example .env
-docker compose up -d --build frontend
+docker compose up -d --build api frontend
 docker compose ps
 ```
 
@@ -94,13 +94,22 @@ Open `http://localhost:5174`. Demo accounts use the same password from `SCHOOLHE
 | Nurse | `nurse@schoolhealth.example` |
 | Parent | `parent@schoolhealth.example` |
 
-The database is reachable by Compose services at `db:5432`; the API is available on `http://localhost:8001`. PostgreSQL data stays in the named Compose volume. For AI-generated insights, configure `LLM_API_KEY` and `INSIGHTS_ADMIN_TOKEN` in `.env`, then restart with `docker compose up -d --force-recreate api`.
+The database is reachable by Compose services at `db:5432`; the API is available on `http://localhost:8001`. PostgreSQL data stays in the named Compose volume.
+
+### School health overview dashboard (US-5.2)
+
+Sign in with an Admin account and open `http://localhost:5174/admin`. The page reads school-level aggregates from `GET /api/admin/dashboard`; the endpoint requires an Admin JWT and returns no student-level details.
+
+Metric definitions:
+
+- **Students:** distinct students in the dataset.
+- **Completed checkups:** saved result records, counted once per student/session pair. The same student can contribute one record for each session.
+- **Status distribution:** stored Nurse-selected `Normal` and `Needs Follow-up` values. Pending and absent participation rows are not counted as completed checkups.
+- Free-text notes are not used to infer issue categories. The current schema has no structured vision or dental issue fields. Class/session filters are not part of this story, so all dashboard values use the same school-wide dataset.
+
+The previous AI insights API prototype is documented in [US-6.1](docs/US-6.1.md); it is not currently part of the US-5.2 dashboard.
 
 ## Testing and CI
-
-### AI insights preview (US-6.1)
-
-The Admin preview at `/#admin` can request Ollama-backed insights from synthetic aggregate counts. See [US-6.1 setup, API contract, safeguards and integration limitations](docs/US-6.1.md). Configure the provider key only in the backend. Authenticated Admin sessions and real dashboard statistics still need to be connected before release.
 
 The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on pushes, pull requests, and manual dispatch. It:
 
