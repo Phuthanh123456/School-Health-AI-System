@@ -7,16 +7,7 @@ from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Numeric, Str
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
-
-
-class Student(Base):
-    __tablename__ = "students"
-    # The profile API maps this same canonical student table as well.
-    __table_args__ = {"schema": "schoolhealth_demo", "extend_existing": True}
-
-    id: Mapped[str] = mapped_column(String, primary_key=True)
-    full_name: Mapped[str] = mapped_column(Text, nullable=False)
-    class_name: Mapped[str] = mapped_column(Text, nullable=False)
+from app.models.student import Student
 
 
 class CheckupSession(Base):

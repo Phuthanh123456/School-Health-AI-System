@@ -6,8 +6,7 @@ from app.database import Base
 
 class Student(Base):
     __tablename__ = "students"
-    # Checkup routes also map the canonical student table.
-    __table_args__ = {"schema": "schoolhealth_demo", "extend_existing": True}
+    __table_args__ = {"schema": "schoolhealth_demo"}
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     full_name: Mapped[str] = mapped_column(Text)

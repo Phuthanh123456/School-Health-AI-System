@@ -2,7 +2,7 @@
 
 SchoolHealth is a web-based school health management platform for students, families, and school health teams. It is designed to keep student health records organized, make checkup results easier to follow, and support coordinated care over time.
 
-> **Project status:** In development. The frontend foundation is in place; backend services and the planned product features are still being developed.
+> **Project status:** Development demo. Login, role-specific screens, student profiles, checkup sessions/results, demo data, and an AI insights preview are available. Some integrations still require local configuration.
 
 ## Product goals
 
@@ -76,22 +76,25 @@ npm run typecheck
 npm run build
 ```
 
-### Backend
+### Full Docker demo
 
-Backend setup instructions will be added when the FastAPI application and its dependency files are available.
-
-### Start PostgreSQL locally
-
-From the repository root with Docker running, copy the sample environment file if you do not already have a local configuration.
+From the repository root, create the local environment file once, then start the complete stack. Compose builds the frontend and API, waits for PostgreSQL, seeds synthetic students and checkup results, and then starts the web app.
 
 ```powershell
 Copy-Item .env.example .env
-docker compose up -d --wait db
-docker compose ps db
-'SELECT 1;' | docker compose exec -T db sh -c 'PGPASSWORD=$POSTGRES_PASSWORD psql -h 127.0.0.1 -U $POSTGRES_USER -d $POSTGRES_DB -v ON_ERROR_STOP=1'
+docker compose up -d --build frontend
+docker compose ps
 ```
 
-Expect the service to report `healthy` and the query to return `1`. The database is reachable from other Compose services at `db:5432`. The named volume preserves data when the container is recreated. The sample credentials are for local development.
+Open `http://localhost:5174`. Demo accounts use the same password from `SCHOOLHEALTH_DEMO_PASSWORD` in `.env`:
+
+| Role | Email |
+| --- | --- |
+| Admin | `admin@schoolhealth.example` |
+| Nurse | `nurse@schoolhealth.example` |
+| Parent | `parent@schoolhealth.example` |
+
+The database is reachable by Compose services at `db:5432`; the API is available on `http://localhost:8001`. PostgreSQL data stays in the named Compose volume. For AI-generated insights, configure `LLM_API_KEY` and `INSIGHTS_ADMIN_TOKEN` in `.env`, then restart with `docker compose up -d --force-recreate api`.
 
 ## Testing and CI
 
@@ -99,11 +102,11 @@ Expect the service to report `healthy` and the query to return `1`. The database
 
 The Admin preview at `/#admin` can request Ollama-backed insights from synthetic aggregate counts. See [US-6.1 setup, API contract, safeguards and integration limitations](docs/US-6.1.md). Configure the provider key only in the backend. Authenticated Admin sessions and real dashboard statistics still need to be connected before release.
 
-The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on pushes, pull requests, and manual dispatch. It is prepared to:
+The GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on pushes, pull requests, and manual dispatch. It:
 
 - Install backend dependencies from `backend/requirements.txt` and run pytest tests in `backend/tests/`.
 - Install frontend dependencies with `npm ci`, then run the `lint`, `typecheck`, and `build` scripts defined in `frontend/package.json`.
-- Install Chromium and run Playwright tests when a `frontend/playwright.config.*` file and test files under `frontend/tests/` are present.
+- Install Chromium and run Playwright tests when configured test files are present.
 
 Run the corresponding checks locally:
 
@@ -123,7 +126,7 @@ npm run build
 npx playwright test
 ```
 
-Playwright should have a `webServer` configuration to start the application before running end-to-end tests. Backend checks will run once the backend dependency file and tests are added.
+Playwright uses the configuration in `frontend/playwright.config.ts`.
 
 ## Team workflow and data safety
 
