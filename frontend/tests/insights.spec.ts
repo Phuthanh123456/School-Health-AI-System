@@ -1,7 +1,30 @@
 import { expect, test } from '@playwright/test'
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/#admin')
+  const origin = 'http://127.0.0.1:5175'
+  await page.addInitScript(() => {
+    sessionStorage.setItem('schoolhealth.auth-session', JSON.stringify({
+      accessToken: 'test-admin-token',
+      expiresAt: Date.now() + 60 * 60 * 1000,
+    }))
+  })
+  await page.route('**/auth/me', async route => {
+    const headers = {
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Headers': 'authorization,content-type',
+      'Access-Control-Allow-Methods': 'GET,OPTIONS',
+    }
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers })
+      return
+    }
+    await route.fulfill({
+      status: 200,
+      headers,
+      json: { id: 'admin', email: 'admin@schoolhealth.example', role: 'admin' },
+    })
+  })
+  await page.goto('/admin')
   await page.getByLabel('Thông tin truy cập quản trị (môi trường phát triển)').fill('test-admin')
 })
 
