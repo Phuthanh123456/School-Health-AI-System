@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import LoginPage from './LoginPage'
 import NurseStudents from './NurseStudents'
+import { NurseCheckupEntry } from './NurseCheckupEntry'
 import { restoreSession, roleLandingPaths, signIn, signOut, type UserRole } from './auth'
 
 const features = [
@@ -282,8 +283,45 @@ function ProtectedRoute({ role }: { role: UserRole }) {
   }
 
   if (status !== 'authenticated') return null
-  if (role === 'nurse') return <NurseStudents />
+  if (role === 'nurse') return <NurseWorkspace />
   return <RoleLandingPage role={role} />
+}
+
+type NurseRoute =
+  | { kind: 'nurse-entry' }
+  | { kind: 'checkup-sessions'; selectedSessionId: string | null }
+  | { kind: 'result-entry'; sessionId: string | null }
+
+function NurseWorkspace() {
+  const [section, setSection] = useState<'profiles' | 'checkups'>('profiles')
+  const [route, setRoute] = useState<NurseRoute>({ kind: 'nurse-entry' })
+
+  if (section === 'checkups') {
+    return (
+      <>
+        <nav className="flex flex-wrap gap-3 border-b border-border bg-white px-6 py-4">
+          <button type="button" onClick={() => setSection('profiles')} className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:border-primary">Student profiles</button>
+          <span className="rounded-full bg-primary-soft px-4 py-2 text-sm font-semibold text-primary-strong">Checkup sessions and results</span>
+        </nav>
+        <NurseCheckupEntry
+          route={route}
+          onClose={() => setSection('profiles')}
+          onSelectSession={(sessionId) => setRoute({ kind: 'checkup-sessions', selectedSessionId: sessionId })}
+          onContinueToResults={(sessionId) => setRoute({ kind: 'result-entry', sessionId })}
+        />
+      </>
+    )
+  }
+
+  return (
+    <>
+      <nav className="flex flex-wrap gap-3 border-b border-border bg-white px-6 py-4">
+        <span className="rounded-full bg-primary-soft px-4 py-2 text-sm font-semibold text-primary-strong">Student profiles</span>
+        <button type="button" onClick={() => { setRoute({ kind: 'nurse-entry' }); setSection('checkups') }} className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:border-primary">Checkup sessions and results</button>
+      </nav>
+      <NurseStudents />
+    </>
+  )
 }
 
 function App() {

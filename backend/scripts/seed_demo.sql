@@ -52,12 +52,24 @@ CREATE TABLE IF NOT EXISTS checkup_sessions (
 CREATE TABLE IF NOT EXISTS checkup_results (
     session_id text REFERENCES checkup_sessions(id),
     student_id text REFERENCES students(id),
-    status text NOT NULL CHECK (status IN ('completed', 'follow_up', 'pending', 'absent')),
+    status text NOT NULL CHECK (status IN ('completed', 'follow_up', 'pending', 'absent', 'Normal', 'Needs Follow-up')),
     height_cm numeric(5, 1),
     weight_kg numeric(4, 1),
+    bmi numeric(16, 6),
+    vision text,
     notes text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (session_id, student_id)
 );
+
+ALTER TABLE checkup_results ADD COLUMN IF NOT EXISTS bmi numeric(16, 6);
+ALTER TABLE checkup_results ADD COLUMN IF NOT EXISTS vision text;
+ALTER TABLE checkup_results ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE checkup_results ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE checkup_results DROP CONSTRAINT IF EXISTS checkup_results_status_check;
+ALTER TABLE checkup_results ADD CONSTRAINT checkup_results_status_check
+    CHECK (status IN ('completed', 'follow_up', 'pending', 'absent', 'Normal', 'Needs Follow-up'));
 
 INSERT INTO students (id, full_name, class_name)
 SELECT 'DEMO-' || lpad(position::text, 3, '0'), full_name, '6A1'
@@ -123,4 +135,8 @@ SELECT session_id, 'DEMO-' || lpad(n::text, 3, '0'), status,
        END
 FROM sample
 ON CONFLICT (session_id, student_id) DO NOTHING;
+
+UPDATE checkup_results
+SET bmi = round(weight_kg / power(height_cm / 100, 2), 6), updated_at = now()
+WHERE bmi IS NULL AND height_cm > 0 AND weight_kg > 0;
 COMMIT;
