@@ -9,6 +9,7 @@ type NurseRoute =
   | { kind: 'checkup-sessions'; selectedSessionId: string | null }
   | { kind: 'result-entry'; sessionId: string | null }
 type Status = 'Normal' | 'Needs Follow-up'
+type ResultLoadState = 'idle' | 'loading' | 'ready' | 'error'
 type Result = {
   session_id: string
   student_id: string
@@ -21,6 +22,19 @@ type Result = {
 }
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
+
+function isResult(value: unknown): value is Result {
+  if (typeof value !== 'object' || value === null) return false
+  const result = value as Partial<Result>
+  return typeof result.session_id === 'string'
+    && typeof result.student_id === 'string'
+    && typeof result.height_cm === 'number' && Number.isFinite(result.height_cm) && result.height_cm > 0
+    && typeof result.weight_kg === 'number' && Number.isFinite(result.weight_kg) && result.weight_kg > 0
+    && typeof result.bmi === 'number' && Number.isFinite(result.bmi)
+    && (result.vision === null || typeof result.vision === 'string')
+    && (result.notes === null || typeof result.notes === 'string')
+    && (result.status === 'Normal' || result.status === 'Needs Follow-up')
+}
 
 async function responseError(response: Response) {
   try {
@@ -67,7 +81,7 @@ export function NurseCheckupEntry({
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [resultLoading, setResultLoading] = useState(false)
+  const [resultLoadState, setResultLoadState] = useState<ResultLoadState>('idle')
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
   const resultRequestRef = useRef(0)
@@ -75,11 +89,15 @@ export function NurseCheckupEntry({
   const resultAbortRef = useRef<AbortController | null>(null)
   const rosterAbortRef = useRef<AbortController | null>(null)
   const selectedKeyRef = useRef('')
+  const editableResultKeyRef = useRef('')
 
   const bmi = calculateBmi(height, weight)
+  const resultLoading = resultLoadState === 'loading'
+  const resultEditable = resultLoadState === 'ready'
   const routeSessionId = route.kind === 'result-entry' ? route.sessionId : null
 
   useEffect(() => () => {
+    editableResultKeyRef.current = ''
     resultAbortRef.current?.abort()
     rosterAbortRef.current?.abort()
   }, [])
@@ -90,6 +108,7 @@ export function NurseCheckupEntry({
     rosterRequestRef.current += 1
     resultAbortRef.current?.abort()
     selectedKeyRef.current = ''
+    editableResultKeyRef.current = ''
     resultRequestRef.current += 1
     setStudent(null)
     setHeight('')
@@ -97,7 +116,7 @@ export function NurseCheckupEntry({
     setVision('')
     setNotes('')
     setBusy(false)
-    setResultLoading(false)
+    setResultLoadState('idle')
     setStudents([])
     if (!authorization || !routeSessionId) return
 
@@ -136,6 +155,7 @@ export function NurseCheckupEntry({
   function clearStudentSelection() {
     resultAbortRef.current?.abort()
     selectedKeyRef.current = ''
+    editableResultKeyRef.current = ''
     resultRequestRef.current += 1
     setStudent(null)
     setHeight('')
@@ -143,7 +163,7 @@ export function NurseCheckupEntry({
     setVision('')
     setNotes('')
     setStatus('Normal')
-    setResultLoading(false)
+    setResultLoadState('idle')
     setError('')
     setMessage('')
   }
@@ -219,6 +239,7 @@ export function NurseCheckupEntry({
     const controller = new AbortController()
     resultAbortRef.current = controller
     selectedKeyRef.current = requestKey
+    editableResultKeyRef.current = ''
     setStudent(nextStudent)
     setError('')
     setMessage('')
@@ -227,18 +248,24 @@ export function NurseCheckupEntry({
     setVision('')
     setNotes('')
     setStatus('Normal')
-    setResultLoading(true)
+    setResultLoadState('loading')
     const url = `${API_BASE}/checkups/sessions/${encodeURIComponent(requestedSessionId)}/students/${encodeURIComponent(nextStudent.id)}/result`
     try {
       const response = await fetch(url, { headers: authHeaders(), signal: controller.signal })
       if (response.status === 404) {
-        const detail = await responseError(response)
-        if (detail === 'No checkup result has been saved for this student.') return
-        throw new Error(detail)
+        const body = await response.json() as { detail?: unknown } | null
+        if (body?.detail !== 'No checkup result has been saved for this student.') {
+          throw new Error(typeof body?.detail === 'string' ? body.detail : 'Không xác nhận được trạng thái kết quả. Hãy tải lại.')
+        }
+        if (controller.signal.aborted || requestId !== resultRequestRef.current || selectedKeyRef.current !== requestKey) return
+        editableResultKeyRef.current = requestKey
+        setResultLoadState('ready')
+        return
       }
       if (!response.ok) throw new Error(await responseError(response))
-      const result = await response.json() as Result
-      if (requestId !== resultRequestRef.current || selectedKeyRef.current !== requestKey) return
+      const result: unknown = await response.json()
+      if (controller.signal.aborted || requestId !== resultRequestRef.current || selectedKeyRef.current !== requestKey) return
+      if (!isResult(result)) throw new Error('Dữ liệu kết quả không hợp lệ. Hãy tải lại trước khi chỉnh sửa.')
       if (result.session_id !== requestedSessionId || result.student_id !== nextStudent.id) {
         throw new Error('The server returned a result for a different student or session.')
       }
@@ -247,14 +274,14 @@ export function NurseCheckupEntry({
       setVision(result.vision || '')
       setNotes(result.notes || '')
       setStatus(result.status)
+      editableResultKeyRef.current = requestKey
+      setResultLoadState('ready')
       setMessage('Đã mở kết quả đã lưu để chỉnh sửa.')
     } catch (reason) {
       if (!controller.signal.aborted && requestId === resultRequestRef.current && selectedKeyRef.current === requestKey) {
+        editableResultKeyRef.current = ''
+        setResultLoadState('error')
         setError(reason instanceof Error ? reason.message : 'Không thể tải kết quả.')
-      }
-    } finally {
-      if (requestId === resultRequestRef.current && selectedKeyRef.current === requestKey) {
-        setResultLoading(false)
       }
     }
   }
@@ -264,7 +291,9 @@ export function NurseCheckupEntry({
     if (savingRef.current) return
     if (!sessionId || !student) return setError('Vui lòng chọn phiên khám và học sinh tham gia.')
     if (selectedKeyRef.current !== `${sessionId}\u0000${student.id}`) return setError('Lựa chọn học sinh đã thay đổi. Hãy chọn lại học sinh trước khi lưu.')
-    if (resultLoading) return setError('Đang tải kết quả học sinh; hãy đợi trước khi lưu.')
+    if (!resultEditable || editableResultKeyRef.current !== selectedKeyRef.current) {
+      return setError('Chưa tải được kết quả học sinh. Hãy tải lại thành công trước khi lưu.')
+    }
     const heightValue = Number(height)
     const weightValue = Number(weight)
     if (!height.trim() || !weight.trim() || !Number.isFinite(heightValue) || !Number.isFinite(weightValue) || heightValue <= 0 || weightValue <= 0) {
@@ -360,27 +389,35 @@ export function NurseCheckupEntry({
             {student && <form onSubmit={saveResult} className="grid gap-4 rounded-3xl border border-border bg-white p-6 sm:p-8">
               <div className="rounded-2xl bg-background p-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted">Học sinh được chọn</p><p className="mt-1 font-display text-xl font-bold">{student.full_name}</p><p className="text-sm text-muted">Mã {student.student_code} · Lớp {student.class_name}</p></div>
               {resultLoading && <p role="status" className="text-sm text-muted">Đang tải kết quả đã lưu…</p>}
+              {resultLoadState === 'error' && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                  <p className="text-sm text-red-800">Chưa tải được kết quả. Form được khóa để bảo vệ dữ liệu đã lưu.</p>
+                  <button type="button" disabled={saving} onClick={() => void selectStudent(student)} className="mt-3 min-h-11 rounded-xl border border-primary px-4 font-semibold text-primary-strong disabled:opacity-50">
+                    Tải lại kết quả
+                  </button>
+                </div>
+              )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-1 text-sm font-semibold">Chiều cao (cm)
-                  <input required disabled={resultLoading || saving} type="number" min="0.1" max="9999.9" step="0.1" value={height} onChange={(event) => setHeight(event.target.value)} className="rounded-xl border border-border px-3 py-2.5 font-normal disabled:opacity-60" />
+                  <input required disabled={!resultEditable || saving} type="number" min="0.1" max="9999.9" step="0.1" value={height} onChange={(event) => setHeight(event.target.value)} className="rounded-xl border border-border px-3 py-2.5 font-normal disabled:opacity-60" />
                 </label>
                 <label className="grid gap-1 text-sm font-semibold">Cân nặng (kg)
-                  <input required disabled={resultLoading || saving} type="number" min="0.1" max="999.9" step="0.1" value={weight} onChange={(event) => setWeight(event.target.value)} className="rounded-xl border border-border px-3 py-2.5 font-normal disabled:opacity-60" />
+                  <input required disabled={!resultEditable || saving} type="number" min="0.1" max="999.9" step="0.1" value={weight} onChange={(event) => setWeight(event.target.value)} className="rounded-xl border border-border px-3 py-2.5 font-normal disabled:opacity-60" />
                 </label>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-1 text-sm font-semibold">Thị lực (tùy chọn)
-                  <input disabled={resultLoading || saving} value={vision} onChange={(event) => setVision(event.target.value)} maxLength={2000} className="rounded-xl border border-border px-3 py-2.5 font-normal disabled:opacity-60" />
+                  <input disabled={!resultEditable || saving} value={vision} onChange={(event) => setVision(event.target.value)} maxLength={2000} className="rounded-xl border border-border px-3 py-2.5 font-normal disabled:opacity-60" />
                 </label>
                 <label className="grid gap-1 text-sm font-semibold">Trạng thái theo dõi do Nurse chọn
-                  <select disabled={resultLoading || saving} value={status} onChange={(event) => setStatus(event.target.value as Status)} className="rounded-xl border border-border bg-white px-3 py-2.5 font-normal disabled:opacity-60"><option>Normal</option><option>Needs Follow-up</option></select>
+                  <select disabled={!resultEditable || saving} value={status} onChange={(event) => setStatus(event.target.value as Status)} className="rounded-xl border border-border bg-white px-3 py-2.5 font-normal disabled:opacity-60"><option>Normal</option><option>Needs Follow-up</option></select>
                 </label>
               </div>
               <label className="grid gap-1 text-sm font-semibold">Ghi chú (tùy chọn)
-                <textarea disabled={resultLoading || saving} value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={5000} rows={3} className="rounded-xl border border-border px-3 py-2.5 font-normal disabled:opacity-60" />
+                <textarea disabled={!resultEditable || saving} value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={5000} rows={3} className="rounded-xl border border-border px-3 py-2.5 font-normal disabled:opacity-60" />
               </label>
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-primary-soft p-4"><span className="font-semibold">BMI tính toán</span><output aria-live="polite" className="font-display text-2xl font-bold">{formatBmi(bmi)}</output></div>
-              <button disabled={busy || saving || resultLoading} className="min-h-12 rounded-xl bg-primary px-6 font-semibold text-white disabled:opacity-60">{saving ? 'Đang lưu…' : 'Lưu / cập nhật kết quả'}</button>
+              <button disabled={busy || saving || !resultEditable} className="min-h-12 rounded-xl bg-primary px-6 font-semibold text-white disabled:opacity-60">{saving ? 'Đang lưu…' : 'Lưu / cập nhật kết quả'}</button>
             </form>}
           </>
         )}

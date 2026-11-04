@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { NurseCheckupEntry } from '../src/NurseCheckupEntry'
@@ -92,7 +92,7 @@ describe('Nurse checkup result selection', () => {
     const heightInput = await screen.findByLabelText('Chiều cao (cm)') as HTMLInputElement
     await waitFor(() => expect(heightInput.value).toBe(''))
 
-    lateAlex.resolve(jsonResponse(resultFor('STU-001', 155, 48.2)))
+    await act(async () => { lateAlex.resolve(jsonResponse(resultFor('STU-001', 155, 48.2))) })
     await waitFor(() => expect(heightInput.value).toBe(''))
 
     expect(screen.getByRole('button', { name: /Blair Student/ }).getAttribute('aria-pressed')).toBe('true')
@@ -148,5 +148,87 @@ describe('Nurse checkup result selection', () => {
 
     expect((await screen.findByRole('alert')).textContent).toContain('một chữ số thập phân')
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
+  })
+
+  it.each([
+    ['HTTP 500', () => jsonResponse({ detail: 'Server error' }, 500)],
+    ['HTTP 403', () => jsonResponse({ detail: 'Forbidden' }, 403)],
+    ['HTTP 401', () => jsonResponse({ detail: 'Unauthorized' }, 401)],
+    ['network failure', () => { throw new TypeError('Failed to fetch') }],
+    ['unknown student 404', () => jsonResponse({ detail: 'Student not found.' }, 404)],
+    ['invalid 404 payload', () => jsonResponse({ detail: ['No checkup result has been saved for this student.'] }, 404)],
+    ['incomplete result', () => jsonResponse({ session_id: 'SESSION-A', student_id: 'STU-001' })],
+    ['wrong student result', () => jsonResponse(resultFor('STU-002'))],
+    ['invalid JSON', () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('Invalid JSON') } }) as Response],
+  ])('locks the form after %s and preserves existing data after a successful retry', async (_label, failedResponse) => {
+    const existing = { ...resultFor('STU-001'), notes: 'Keep this note', vision: '6/9', status: 'Needs Follow-up' }
+    let loads = 0
+    const fetchMock = vi.mocked(fetch)
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (init?.method === 'PUT') return jsonResponse(existing)
+      if (url.endsWith('/STU-001/result')) {
+        loads += 1
+        return loads === 1 ? failedResponse() : jsonResponse(existing)
+      }
+      if (url.endsWith('/checkups/sessions')) return jsonResponse([session])
+      if (url.endsWith('/checkups/sessions/SESSION-A/students')) return jsonResponse(roster)
+      throw new Error('Unexpected request')
+    })
+
+    await login()
+    fireEvent.click(screen.getByRole('button', { name: /Alex Student/ }))
+    const retry = await screen.findByRole('button', { name: 'Tải lại kết quả' })
+    const save = screen.getByRole('button', { name: 'Lưu / cập nhật kết quả' }) as HTMLButtonElement
+    expect(save.disabled).toBe(true)
+    for (const label of ['Chiều cao (cm)', 'Cân nặng (kg)', 'Thị lực (tùy chọn)', 'Ghi chú (tùy chọn)', 'Trạng thái theo dõi do Nurse chọn']) {
+      expect((screen.getByLabelText(label) as HTMLInputElement).disabled).toBe(true)
+    }
+
+    // A direct submit must also be refused; disabling the button alone is insufficient.
+    fireEvent.change(screen.getByLabelText('Chiều cao (cm)'), { target: { value: '160' } })
+    fireEvent.change(screen.getByLabelText('Cân nặng (kg)'), { target: { value: '50' } })
+    fireEvent.submit(save.closest('form')!)
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
+
+    fireEvent.click(retry)
+    await waitFor(() => expect((screen.getByLabelText('Ghi chú (tùy chọn)') as HTMLTextAreaElement).value).toBe(existing.notes))
+    expect((screen.getByLabelText('Thị lực (tùy chọn)') as HTMLInputElement).value).toBe(existing.vision)
+    expect((screen.getByLabelText('Trạng thái theo dõi do Nurse chọn') as HTMLSelectElement).value).toBe(existing.status)
+    expect(save.disabled).toBe(false)
+    fireEvent.submit(save.closest('form')!)
+    await screen.findByText(/Đã lưu kết quả\. BMI:/)
+
+    const writes = fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT')
+    expect(writes).toHaveLength(1)
+    expect(JSON.parse(String(writes[0][1]?.body))).toEqual({
+      height_cm: existing.height_cm,
+      weight_kg: existing.weight_kg,
+      vision: existing.vision,
+      notes: existing.notes,
+      status: existing.status,
+    })
+  })
+
+  it('allows a new result only after the exact no-saved-result response', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (init?.method === 'PUT') return jsonResponse(resultFor('STU-001', 160, 50))
+      if (url.endsWith('/STU-001/result')) return jsonResponse({ detail: 'No checkup result has been saved for this student.' }, 404)
+      if (url.endsWith('/checkups/sessions')) return jsonResponse([session])
+      if (url.endsWith('/checkups/sessions/SESSION-A/students')) return jsonResponse(roster)
+      throw new Error('Unexpected request')
+    })
+
+    await login()
+    fireEvent.click(screen.getByRole('button', { name: /Alex Student/ }))
+    const save = await screen.findByRole('button', { name: 'Lưu / cập nhật kết quả' }) as HTMLButtonElement
+    await waitFor(() => expect(save.disabled).toBe(false))
+    fireEvent.change(screen.getByLabelText('Chiều cao (cm)'), { target: { value: '160' } })
+    fireEvent.change(screen.getByLabelText('Cân nặng (kg)'), { target: { value: '50' } })
+    fireEvent.submit(save.closest('form')!)
+    await screen.findByText(/Đã lưu kết quả\. BMI:/)
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(1)
   })
 })
