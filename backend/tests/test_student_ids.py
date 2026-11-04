@@ -149,7 +149,7 @@ def test_search_and_delete_student_with_dependent_records(client):
     db = next(database)
     try:
         db.execute(parent_students.insert().values(parent_id="parent", student_id="DEMO025"))
-        db.execute(checkup_results.insert().values(session_id="session", student_id="DEMO025"))
+        db.execute(checkup_results.insert().values(session_id="session", student_id="DEMO025", status="pending"))
         db.commit()
     finally:
         database.close()
