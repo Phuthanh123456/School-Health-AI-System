@@ -70,8 +70,8 @@ function ProfileForm({ profile, onSaved, onSaving }: {
       <fieldset disabled={saving} className="grid gap-4">
         <label className="text-sm font-semibold">Mã học sinh
           <input className={inputStyle} name="id" defaultValue={profile?.id} readOnly={Boolean(profile)} required maxLength={50}
-            pattern="[A-Za-z0-9_\-]+" title="Chỉ dùng chữ không dấu, số, dấu gạch ngang và gạch dưới." />
-          {!profile && <span className="mt-1 block text-xs font-normal text-muted">Dùng chữ không dấu, số, dấu gạch ngang hoặc gạch dưới.</span>}
+            pattern="[A-Za-z0-9]+" title="Viết liền, chỉ dùng chữ không dấu và số." />
+          {!profile && <span className="mt-1 block text-xs font-normal text-muted">Viết liền, chỉ dùng chữ không dấu và số.</span>}
         </label>
         <label className="text-sm font-semibold">Họ tên
           <input className={inputStyle} name="full_name" defaultValue={profile?.full_name} required maxLength={200} />
