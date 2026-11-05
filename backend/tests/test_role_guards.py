@@ -9,7 +9,7 @@ from app.api.guards import AuthenticatedUser, get_current_user, require_role
 
 @pytest.fixture
 def test_app() -> FastAPI:
-    # App và các API này chỉ tồn tại trong test.
+    # This app and these API endpoints exist only in the test suite.
     app = FastAPI()
 
     @app.get("/admin-overview")
@@ -34,7 +34,7 @@ def test_app() -> FastAPI:
 
 
 def test_unauthenticated_request_is_rejected(test_app: FastAPI) -> None:
-    # Không giả lập user: dependency hiện tại phải từ chối.
+    # Do not mock a user; the current dependency must reject the request.
     with TestClient(test_app) as client:
         response = client.get("/admin-overview")
 
@@ -62,7 +62,7 @@ def test_role_access(
     path: str,
     expected_status: int,
 ) -> None:
-    # Giả lập kết quả xác thực chỉ trong app test.
+    # Mock authentication results only in the test application.
     test_app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
         id=f"test-{role}",
         role=role,

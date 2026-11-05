@@ -92,7 +92,7 @@ def test_signed_in_admin_and_exact_database_aggregates(api):
     assert response.headers['Cache-Control'] == 'no-store'
     assert '56' in response.json()['summary'] and '35' in response.json()['summary']
     assert '/30' not in response.json()['summary']  # record totals must not become student coverage
-    assert 'không phải chẩn đoán' in response.json()['disclaimer']
+    assert 'not a diagnosis' in response.json()['disclaimer']
     payload = json.loads(calls[0].content)
     assert json.loads(payload['messages'][1]['content']) == STATS
     assert 'PRIVATE' not in calls[0].content.decode()

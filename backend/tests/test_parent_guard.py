@@ -10,7 +10,7 @@ from app.database import get_db
 
 
 class FakeResult:
-    """Giả lập kết quả truy vấn database."""
+    """Simulate a database query result."""
 
     def __init__(self, found: bool):
         self.found = found
@@ -20,7 +20,7 @@ class FakeResult:
 
 
 class FakeDatabase:
-    """Dữ liệu liên kết giả, chỉ sử dụng trong test."""
+    """Fake relationship data used only in tests."""
 
     def __init__(self):
         self.links = {
@@ -37,7 +37,7 @@ class FakeDatabase:
 def test_app() -> FastAPI:
     app = FastAPI()
 
-    # API này chỉ tồn tại trong test.
+    # This API exists only in the test application.
     @app.get("/students/{student_id}/results")
     def read_results(
         student_id: str,
@@ -45,7 +45,7 @@ def test_app() -> FastAPI:
     ):
         return {"student_id": student_id, "parent_id": user.id}
 
-    # API sửa này chỉ dùng để test Parent bị guard role từ chối.
+    # This mutation endpoint exists only to verify that role guards reject Parents.
     @app.put("/students/{student_id}/profile")
     def update_profile(
         student_id: str,

@@ -39,13 +39,13 @@ test('preserves Nurse profile and checkup navigation without changing the route'
   await page.route('**/checkups/sessions', route => route.fulfill({ status: 200, json: [] }))
 
   await page.goto('/nurse')
-  await expect(page.getByRole('heading', { name: 'Hồ sơ sức khỏe học sinh' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Student health profiles' })).toBeVisible()
   await page.getByRole('button', { name: /Checkup sessions/ }).click()
 
   await expect(page).toHaveURL(/\/nurse$/)
   await expect(page.getByRole('combobox')).toBeVisible()
   await page.getByRole('button', { name: /Student profiles/ }).click()
-  await expect(page.getByRole('heading', { name: 'Hồ sơ sức khỏe học sinh' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Student health profiles' })).toBeVisible()
 })
 
 test('keeps Parent deep links and blocks another role from Admin', async ({ page }) => {

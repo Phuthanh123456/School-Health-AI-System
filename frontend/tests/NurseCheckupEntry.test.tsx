@@ -88,14 +88,14 @@ describe('Nurse checkup result selection', () => {
     await login()
     fireEvent.click(screen.getByRole('button', { name: /Alex Student/ }))
     fireEvent.click(screen.getByRole('button', { name: /Blair Student/ }))
-    const heightInput = await screen.findByLabelText('Chiều cao (cm)') as HTMLInputElement
+    const heightInput = await screen.findByLabelText('Height (cm)') as HTMLInputElement
     await waitFor(() => expect(heightInput.value).toBe(''))
 
     await act(async () => { lateAlex.resolve(jsonResponse(resultFor('STU-001', 155, 48.2))) })
     await waitFor(() => expect(heightInput.value).toBe(''))
 
     expect(screen.getByRole('button', { name: /Blair Student/ }).getAttribute('aria-pressed')).toBe('true')
-    expect((screen.getByLabelText('Cân nặng (kg)') as HTMLInputElement).value).toBe('')
+    expect((screen.getByLabelText('Weight (kg)') as HTMLInputElement).value).toBe('')
   })
 
   it('unlocks student search immediately when changing sessions during an in-flight search', async () => {
@@ -121,11 +121,11 @@ describe('Nurse checkup result selection', () => {
         onContinueToResults={() => undefined}
       />,
     )
-    expect(screen.getByRole('list', { name: 'Các bước nhập kết quả' })).toBeTruthy()
+    expect(screen.getByRole('list', { name: 'Result entry steps' })).toBeTruthy()
     await screen.findByRole('combobox')
     const sessionSelect = document.querySelector('select')!
     fireEvent.change(sessionSelect, { target: { value: 'SESSION-A' } })
-    const searchButton = screen.getAllByRole('button').find((button) => button.textContent?.includes('Tìm')) as HTMLButtonElement
+    const searchButton = screen.getAllByRole('button').find((button) => button.textContent?.includes('Search')) as HTMLButtonElement
     fireEvent.click(searchButton)
     await waitFor(() => expect(sessionASignal).toBeDefined())
 
@@ -156,9 +156,9 @@ describe('Nurse checkup result selection', () => {
 
     await login()
     fireEvent.click(screen.getByRole('button', { name: /Alex Student/ }))
-    await waitFor(() => expect((screen.getByLabelText('Cân nặng (kg)') as HTMLInputElement).value).toBe('40.1'))
-    fireEvent.submit(screen.getByRole('button', { name: 'Lưu / cập nhật kết quả' }).closest('form')!)
-    await screen.findByRole('button', { name: 'Đang lưu…' })
+    await waitFor(() => expect((screen.getByLabelText('Weight (kg)') as HTMLInputElement).value).toBe('40.1'))
+    fireEvent.submit(screen.getByRole('button', { name: 'Save / update result' }).closest('form')!)
+    await screen.findByRole('button', { name: 'Saving…' })
 
     const blairButton = screen.getByRole('button', { name: /Blair Student/ }) as HTMLButtonElement
     expect(blairButton.disabled).toBe(true)
@@ -166,7 +166,7 @@ describe('Nurse checkup result selection', () => {
     expect(screen.getByRole('button', { name: /Alex Student/ }).getAttribute('aria-pressed')).toBe('true')
 
     pendingSave.resolve(jsonResponse(resultFor('STU-001')))
-    await screen.findByText(/Đã lưu kết quả\. BMI:/)
+    await screen.findByText(/Result saved\. BMI:/)
     expect(String(fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')?.[0])).toContain('/STU-001/result')
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(1)
   })
@@ -183,13 +183,13 @@ describe('Nurse checkup result selection', () => {
 
     await login()
     fireEvent.click(screen.getByRole('button', { name: /Alex Student/ }))
-    const height = await screen.findByLabelText('Chiều cao (cm)')
-    await waitFor(() => expect((screen.getByRole('button', { name: 'Lưu / cập nhật kết quả' }) as HTMLButtonElement).disabled).toBe(false))
+    const height = await screen.findByLabelText('Height (cm)')
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Save / update result' }) as HTMLButtonElement).disabled).toBe(false))
     fireEvent.change(height, { target: { value: '150' } })
-    fireEvent.change(screen.getByLabelText('Cân nặng (kg)'), { target: { value: '40.04' } })
-    fireEvent.submit(screen.getByRole('button', { name: 'Lưu / cập nhật kết quả' }).closest('form')!)
+    fireEvent.change(screen.getByLabelText('Weight (kg)'), { target: { value: '40.04' } })
+    fireEvent.submit(screen.getByRole('button', { name: 'Save / update result' }).closest('form')!)
 
-    expect((await screen.findByRole('alert')).textContent).toContain('một chữ số thập phân')
+    expect((await screen.findByRole('alert')).textContent).toContain('one decimal place')
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
   })
 
@@ -221,26 +221,26 @@ describe('Nurse checkup result selection', () => {
 
     await login()
     fireEvent.click(screen.getByRole('button', { name: /Alex Student/ }))
-    const retry = await screen.findByRole('button', { name: 'Tải lại kết quả' })
-    const save = screen.getByRole('button', { name: 'Lưu / cập nhật kết quả' }) as HTMLButtonElement
+    const retry = await screen.findByRole('button', { name: 'Reload result' })
+    const save = screen.getByRole('button', { name: 'Save / update result' }) as HTMLButtonElement
     expect(save.disabled).toBe(true)
-    for (const label of ['Chiều cao (cm)', 'Cân nặng (kg)', 'Thị lực (tùy chọn)', 'Ghi chú (tùy chọn)', 'Trạng thái theo dõi do Nurse chọn']) {
+    for (const label of ['Height (cm)', 'Weight (kg)', 'Vision (optional)', 'Notes (optional)', 'Follow-up status selected by the Nurse']) {
       expect((screen.getByLabelText(label) as HTMLInputElement).disabled).toBe(true)
     }
 
     // A direct submit must also be refused; disabling the button alone is insufficient.
-    fireEvent.change(screen.getByLabelText('Chiều cao (cm)'), { target: { value: '160' } })
-    fireEvent.change(screen.getByLabelText('Cân nặng (kg)'), { target: { value: '50' } })
+    fireEvent.change(screen.getByLabelText('Height (cm)'), { target: { value: '160' } })
+    fireEvent.change(screen.getByLabelText('Weight (kg)'), { target: { value: '50' } })
     fireEvent.submit(save.closest('form')!)
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
 
     fireEvent.click(retry)
-    await waitFor(() => expect((screen.getByLabelText('Ghi chú (tùy chọn)') as HTMLTextAreaElement).value).toBe(existing.notes))
-    expect((screen.getByLabelText('Thị lực (tùy chọn)') as HTMLInputElement).value).toBe(existing.vision)
-    expect((screen.getByLabelText('Trạng thái theo dõi do Nurse chọn') as HTMLSelectElement).value).toBe(existing.status)
+    await waitFor(() => expect((screen.getByLabelText('Notes (optional)') as HTMLTextAreaElement).value).toBe(existing.notes))
+    expect((screen.getByLabelText('Vision (optional)') as HTMLInputElement).value).toBe(existing.vision)
+    expect((screen.getByLabelText('Follow-up status selected by the Nurse') as HTMLSelectElement).value).toBe(existing.status)
     expect(save.disabled).toBe(false)
     fireEvent.submit(save.closest('form')!)
-    await screen.findByText(/Đã lưu kết quả\. BMI:/)
+    await screen.findByText(/Result saved\. BMI:/)
 
     const writes = fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT')
     expect(writes).toHaveLength(1)
@@ -266,12 +266,12 @@ describe('Nurse checkup result selection', () => {
 
     await login()
     fireEvent.click(screen.getByRole('button', { name: /Alex Student/ }))
-    const save = await screen.findByRole('button', { name: 'Lưu / cập nhật kết quả' }) as HTMLButtonElement
+    const save = await screen.findByRole('button', { name: 'Save / update result' }) as HTMLButtonElement
     await waitFor(() => expect(save.disabled).toBe(false))
-    fireEvent.change(screen.getByLabelText('Chiều cao (cm)'), { target: { value: '160' } })
-    fireEvent.change(screen.getByLabelText('Cân nặng (kg)'), { target: { value: '50' } })
+    fireEvent.change(screen.getByLabelText('Height (cm)'), { target: { value: '160' } })
+    fireEvent.change(screen.getByLabelText('Weight (kg)'), { target: { value: '50' } })
     fireEvent.submit(save.closest('form')!)
-    await screen.findByText(/Đã lưu kết quả\. BMI:/)
+    await screen.findByText(/Result saved\. BMI:/)
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(1)
   })
 })

@@ -152,9 +152,9 @@ test('Nurse can search synthetic student profiles from the profile workspace', a
   } }))
   await page.goto('/nurse')
 
-  await expect(page.getByRole('heading', { name: 'Hồ sơ sức khỏe học sinh' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Student health profiles' })).toBeVisible()
   await page.getByRole('button', { name: /Synthetic Student/ }).click()
-  await expect(page.getByRole('heading', { name: 'Hồ sơ học sinh' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Student profile' })).toBeVisible()
   await expect(page.getByText('STU101', { exact: true }).first()).toBeVisible()
 })
 

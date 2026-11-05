@@ -30,13 +30,13 @@ async function getJson<T>(path: string, authorization: string, signal?: AbortSig
     })
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw error
-    throw new Error('Không kết nối được tới SchoolHealth API. Hãy kiểm tra backend rồi thử lại.')
+    throw new Error('Could not connect to the SchoolHealth API. Check the backend and try again.')
   }
 
   if (!response.ok) {
-    if (response.status === 401) throw new Error('Phiên đăng nhập Nurse đã hết hạn. Hãy đăng nhập lại.')
-    if (response.status === 404) throw new Error('Không tìm thấy đợt khám này.')
-    throw new Error('Không tải được dữ liệu đợt khám. Hãy thử lại sau.')
+    if (response.status === 401) throw new Error('Your Nurse session has expired. Please sign in again.')
+    if (response.status === 404) throw new Error('This checkup session could not be found.')
+    throw new Error('Could not load checkup session data. Please try again later.')
   }
 
   return (await response.json()) as T

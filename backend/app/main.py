@@ -33,7 +33,7 @@ async def validation_error(request, exc):
         return JSONResponse(status_code=422, content={"detail": "Invalid request fields."}, headers={"Cache-Control": "no-store"})
     # Do not echo rejected names, notes, IDs, or raw request bodies to clients.
     if request.url.path == "/api/admin/ai-insights":
-        return JSONResponse(status_code=422, content={"detail": "Dữ liệu yêu cầu không hợp lệ. Chỉ chấp nhận các trường thống kê đã định nghĩa."})
+        return JSONResponse(status_code=422, content={"detail": "The request is invalid. Only the defined aggregate fields are accepted."})
     return await request_validation_exception_handler(request, exc)
 
 

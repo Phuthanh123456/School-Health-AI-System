@@ -23,6 +23,6 @@ def dashboard_statistics(response: Response, snapshot: DashboardSnapshot = Depen
 @router.post("/ai-insights", response_model=InsightResponse)
 async def ai_insights(stats: Aggregates, response: Response, snapshot: DashboardSnapshot = Depends(current_snapshot)):
     if stats != snapshot.aggregates:
-        raise HTTPException(409, "Thống kê đã thay đổi. Vui lòng tải lại dashboard trước khi tạo nhận xét.")
+        raise HTTPException(409, "The dashboard statistics have changed. Refresh the dashboard before generating insights.")
     response.headers["Cache-Control"] = "no-store"
     return await generate_insights(snapshot.aggregates)

@@ -10,15 +10,15 @@ from pydantic import ValidationError
 from app.config import settings
 from app.schemas.insights import Aggregates, InsightResponse, InsightSelection
 
-DISCLAIMER = "Thông tin do AI hỗ trợ chỉ mang tính tham khảo, không phải chẩn đoán hoặc chỉ định điều trị. Nhân viên y tế cần kiểm tra trước khi sử dụng."
+DISCLAIMER = "AI-generated content is for general information only. It is not a diagnosis or treatment recommendation. A qualified health professional should review any follow-up decisions."
 RECOMMENDATIONS = {
-    "checkup_planning": "Rà soát lịch và nguồn lực cho các đợt khám sức khỏe toàn trường.",
-    "followup_capacity": "Rà soát các lượt khám được đánh dấu cần theo dõi với bộ phận y tế trước khi lập kế hoạch cấp trường.",
-    "data_review": "Kiểm tra độ đầy đủ và chất lượng thống kê trước khi lập kế hoạch cấp trường.",
+    "checkup_planning": "Review school-wide checkup planning and available resources.",
+    "followup_capacity": "Review records marked for follow-up with school health staff before planning school-wide support.",
+    "data_review": "Review the completeness and quality of the aggregate data before planning school-wide support.",
 }
 LABELS = {
-    "checkups_completed": "đã hoàn thành khám",
-    "followups_pending": "đang chờ theo dõi",
+    "checkups_completed": "completed checkups",
+    "followups_pending": "follow-up records",
 }
 PROMPT = """You summarize one current school-wide statistical snapshot, not individuals.
 Counts of checkups and follow-ups are RECORDS across all sessions, not unique students.
@@ -40,9 +40,9 @@ have already been withheld. Do not reconstruct withheld counts."""
 
 async def generate_insights(stats: Aggregates) -> InsightResponse:
     if stats.total_students < 20 or stats.checkups_completed < 20:
-        raise HTTPException(422, "Cần ít nhất 20 học sinh và 20 lượt khám để tạo nhận xét tổng hợp.")
+        raise HTTPException(422, "At least 20 students and 20 saved checkup records are required to generate aggregate insights.")
     if not settings.llm_base_url or not settings.llm_model or not settings.llm_api_key:
-        raise HTTPException(503, "Dịch vụ AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.")
+        raise HTTPException(503, "The AI service is not configured. Please contact an administrator.")
     # These categories overlap, so no complementary category is sent.
     safe_stats = {key: value for key, value in stats.model_dump().items() if value == 0 or value >= 5}
     conditions = {"followup_capacity": stats.followups_pending >= 5,
@@ -80,12 +80,12 @@ async def generate_insights(stats: Aggregates) -> InsightResponse:
                 if any(not conditions[code] for code in selection.recommendations):
                     raise ValueError("Unsupported recommendation")
     except (TimeoutError, httpx.TimeoutException):
-        raise HTTPException(504, "AI phản hồi quá lâu. Vui lòng thử lại.") from None
+        raise HTTPException(504, "The AI service took too long to respond. Please try again.") from None
     except (httpx.HTTPError, ValidationError, ValueError, KeyError, IndexError, TypeError):
-        raise HTTPException(502, "Chưa thể tạo nhận xét AI hợp lệ. Vui lòng thử lại sau.") from None
-    sentences = [f"Tổng quan hiện tại: {stats.total_students} học sinh."]
-    record_labels = {"checkups_completed": "lượt khám đã lưu", "followups_pending": "lượt khám có trạng thái cần theo dõi"}
+        raise HTTPException(502, "The AI service returned an invalid response. Please try again later.") from None
+    sentences = [f"Current overview: {stats.total_students} students."]
+    record_labels = {"checkups_completed": "saved checkup records", "followups_pending": "records marked for follow-up"}
     sentences += [f"{getattr(stats, key)} {record_labels[key]}." for key in selection.highlights]
-    sentences.append("Lượt khám được tính theo học sinh và đợt khám, không phải số học sinh riêng biệt.")
-    sentences.append("Các nhóm có thể trùng nhau; chưa có dữ liệu so sánh theo thời gian.")
+    sentences.append("Checkups are counted as student-session records, not unique students.")
+    sentences.append("Categories may overlap, and no historical comparison data is available.")
     return InsightResponse(summary=" ".join(sentences), recommendations=[RECOMMENDATIONS[code] for code in selection.recommendations], disclaimer=DISCLAIMER, aggregates=stats)

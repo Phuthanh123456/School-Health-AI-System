@@ -12,7 +12,7 @@ from app.schemas.auth import AuthenticatedUser as LoginUser
 
 @dataclass(frozen=True)
 class AuthenticatedUser:
-    """Thông tin tối thiểu cần có từ hệ thống đăng nhập."""
+    """Minimum user information required by the authentication system."""
 
     id: str
     role: str
@@ -26,7 +26,7 @@ def get_current_user(
 
 
 def require_role(*allowed_roles: str) -> Callable:
-    """Chỉ cho phép user đã xác thực có role nằm trong danh sách."""
+    """Allow only authenticated users whose role is in the permitted list."""
 
     def role_guard(
         current_user: AuthenticatedUser = Depends(get_current_user),

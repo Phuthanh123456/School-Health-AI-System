@@ -14,11 +14,11 @@ def require_parent_student_link(
     db: Session = Depends(get_db),
 ) -> AuthenticatedUser:
     """
-    Cho phép Parent tiếp tục nếu được liên kết với học sinh được yêu cầu.
+    Allow a Parent to continue only when linked to the requested student.
 
-    - current_user.id lấy từ hệ thống xác thực.
-    - student_id lấy từ đường dẫn API.
-    - Liên kết được kiểm tra trong database.
+    - current_user.id comes from the authentication system.
+    - student_id comes from the API path.
+    - The relationship is verified in the database.
     """
 
     link = db.execute(

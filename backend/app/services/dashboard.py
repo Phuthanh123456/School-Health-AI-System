@@ -21,7 +21,7 @@ def read_dashboard_snapshot(db: Session) -> DashboardSnapshot:
     try:
         row = db.execute(query).mappings().one()
     except SQLAlchemyError:
-        raise HTTPException(503, "Chưa tải được thống kê nhà trường. Vui lòng thử lại.") from None
+        raise HTTPException(503, "School health statistics are temporarily unavailable. Please try again.") from None
     return DashboardSnapshot(
         aggregates=Aggregates(**{key: row[key] for key in Aggregates.model_fields}),
         session_title=None, session_date=None,
