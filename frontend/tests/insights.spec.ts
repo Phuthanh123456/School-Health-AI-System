@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 const stats = { total_students: 480, checkups_completed: 420, followups_pending: 36 }
 const snapshot = { total_students: 480, completed_checkups: 420, status_counts: { normal: 384, needs_follow_up: 36 } }
-const result = { summary: '420 lượt khám đã lưu.', recommendations: ['Rà soát lịch khám toàn trường.'], disclaimer: 'Chỉ tham khảo, không phải chẩn đoán.', aggregates: stats }
+const result = { summary: '420 saved checkup records.', recommendations: ['Review the school-wide checkup schedule.'], disclaimer: 'For reference only, not a diagnosis.', aggregates: stats }
 const apiOrigin = 'http://127.0.0.1:18081'
 
 test.beforeEach(async ({ page }) => {

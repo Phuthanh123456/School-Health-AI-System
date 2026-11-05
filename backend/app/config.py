@@ -19,6 +19,12 @@ class Settings:
 
     def __init__(self) -> None:
         self.database_url: str | URL | None = os.getenv("DATABASE_URL") or None
+        if isinstance(self.database_url, str):
+            # Render supplies a standard PostgreSQL URL; use our installed psycopg driver.
+            for prefix in ("postgres://", "postgresql://"):
+                if self.database_url.startswith(prefix):
+                    self.database_url = "postgresql+psycopg://" + self.database_url[len(prefix):]
+                    break
         postgres_host = os.getenv("POSTGRES_HOST")
         if self.database_url is None and postgres_host:
             self.database_url = URL.create(

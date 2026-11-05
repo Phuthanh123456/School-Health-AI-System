@@ -71,6 +71,38 @@ button {
   font: inherit;
 }
 
+.student-profile-form label {
+  display: block;
+}
+
+.student-profile-form textarea {
+  display: block;
+  width: 100%;
+  min-height: 5.5rem;
+  margin-top: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 400;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.student-profile-form textarea:focus-visible {
+  border-color: var(--color-primary-strong);
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+  outline-offset: 1px;
+}
+
+.student-profile-form textarea:disabled {
+  cursor: not-allowed;
+  background: #f1f5f9;
+  color: var(--color-subtle);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

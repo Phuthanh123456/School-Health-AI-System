@@ -170,7 +170,7 @@ export function NurseCheckupEntry({
       })
       .catch((reason: unknown) => {
         if (!controller.signal.aborted && rosterRequestId === rosterRequestRef.current) {
-          setError(reason instanceof Error ? reason.message : 'Không thể tải danh sách học sinh.')
+          setError(reason instanceof Error ? reason.message : 'Could not load the student list.')
         }
       })
       .finally(() => {
@@ -214,7 +214,7 @@ export function NurseCheckupEntry({
 
   async function searchStudents(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!sessionId) return setError('Vui lòng chọn phiên khám trước.')
+    if (!sessionId) return setError('Please select a checkup session first.')
     if (savingRef.current) return
     const requestedSessionId = sessionId
     const requestId = ++rosterRequestRef.current
@@ -233,7 +233,7 @@ export function NurseCheckupEntry({
       if (requestId === rosterRequestRef.current && requestedSessionId === sessionId) setStudents(nextStudents)
     } catch (reason) {
       if (!controller.signal.aborted && requestId === rosterRequestRef.current) {
-        setError(reason instanceof Error ? reason.message : 'Không thể tìm học sinh.')
+        setError(reason instanceof Error ? reason.message : 'Could not search for students.')
       }
     } finally {
       if (requestId === rosterRequestRef.current) setBusy(false)
@@ -265,7 +265,7 @@ export function NurseCheckupEntry({
       if (response.status === 404) {
         const body = await response.json() as { detail?: unknown } | null
         if (body?.detail !== 'No checkup result has been saved for this student.') {
-          throw new Error(typeof body?.detail === 'string' ? body.detail : 'Không xác nhận được trạng thái kết quả. Hãy tải lại.')
+          throw new Error(typeof body?.detail === 'string' ? body.detail : 'Could not verify the result status. Please reload.')
         }
         if (controller.signal.aborted || requestId !== resultRequestRef.current || selectedKeyRef.current !== requestKey) return
         editableResultKeyRef.current = requestKey
@@ -275,7 +275,7 @@ export function NurseCheckupEntry({
       if (!response.ok) throw new Error(await responseError(response))
       const result: unknown = await response.json()
       if (controller.signal.aborted || requestId !== resultRequestRef.current || selectedKeyRef.current !== requestKey) return
-      if (!isResult(result)) throw new Error('Dữ liệu kết quả không hợp lệ. Hãy tải lại trước khi chỉnh sửa.')
+      if (!isResult(result)) throw new Error('The result data is invalid. Please reload before editing.')
       if (result.session_id !== requestedSessionId || result.student_id !== nextStudent.id) {
         throw new Error('The server returned a result for a different student or session.')
       }
@@ -286,12 +286,12 @@ export function NurseCheckupEntry({
       setStatus(result.status)
       editableResultKeyRef.current = requestKey
       setResultLoadState('ready')
-      setMessage('Đã mở kết quả đã lưu để chỉnh sửa.')
+      setMessage('The saved result is ready to edit.')
     } catch (reason) {
       if (!controller.signal.aborted && requestId === resultRequestRef.current && selectedKeyRef.current === requestKey) {
         editableResultKeyRef.current = ''
         setResultLoadState('error')
-        setError(reason instanceof Error ? reason.message : 'Không thể tải kết quả.')
+        setError(reason instanceof Error ? reason.message : 'Could not load the result.')
       }
     }
   }
@@ -299,18 +299,18 @@ export function NurseCheckupEntry({
   async function saveResult(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (savingRef.current) return
-    if (!sessionId || !student) return setError('Vui lòng chọn phiên khám và học sinh tham gia.')
-    if (selectedKeyRef.current !== `${sessionId}\u0000${student.id}`) return setError('Lựa chọn học sinh đã thay đổi. Hãy chọn lại học sinh trước khi lưu.')
+    if (!sessionId || !student) return setError('Please select a checkup session and a participating student.')
+    if (selectedKeyRef.current !== `${sessionId}\u0000${student.id}`) return setError('The selected student has changed. Please select the student again before saving.')
     if (!resultEditable || editableResultKeyRef.current !== selectedKeyRef.current) {
-      return setError('Chưa tải được kết quả học sinh. Hãy tải lại thành công trước khi lưu.')
+      return setError('The student result has not loaded. Please reload it before saving.')
     }
     const heightValue = Number(height)
     const weightValue = Number(weight)
     if (!height.trim() || !weight.trim() || !Number.isFinite(heightValue) || !Number.isFinite(weightValue) || heightValue <= 0 || weightValue <= 0) {
-      return setError('Chiều cao và cân nặng phải lớn hơn 0.')
+      return setError('Height and weight must be greater than 0.')
     }
     if (heightValue > 9999.9 || weightValue > 999.9 || Math.round(heightValue * 10) !== heightValue * 10 || Math.round(weightValue * 10) !== weightValue * 10) {
-      return setError('Chiều cao tối đa 9999,9 cm và cân nặng tối đa 999,9 kg; mỗi số đo chỉ có một chữ số thập phân.')
+      return setError('Height must not exceed 9999.9 cm and weight must not exceed 999.9 kg; use at most one decimal place.')
     }
     const saveTarget = { sessionId, studentId: student.id, key: selectedKeyRef.current }
     const savePayload = { height_cm: heightValue, weight_kg: weightValue, vision: vision || null, notes: notes || null, status }
@@ -331,9 +331,9 @@ export function NurseCheckupEntry({
       if (saved.session_id !== saveTarget.sessionId || saved.student_id !== saveTarget.studentId) {
         throw new Error('The server returned a result for a different student or session.')
       }
-      if (selectedKeyRef.current === saveTarget.key) setMessage(`Đã lưu kết quả. BMI: ${saved.bmi.toFixed(2)} · Trạng thái: ${saved.status}`)
+      if (selectedKeyRef.current === saveTarget.key) setMessage(`Result saved. BMI: ${saved.bmi.toFixed(2)} · Status: ${saved.status}`)
     } catch (reason) {
-      if (selectedKeyRef.current === saveTarget.key) setError(reason instanceof Error ? reason.message : 'Không thể lưu kết quả.')
+      if (selectedKeyRef.current === saveTarget.key) setError(reason instanceof Error ? reason.message : 'Could not save the result.')
     } finally {
       savingRef.current = false
       setSaving(false)
@@ -347,14 +347,14 @@ export function NurseCheckupEntry({
     <div className="text-foreground">
       <div className="mx-auto max-w-4xl py-2">
         {route.kind === 'result-entry' && route.sessionId ? (
-          <button type="button" disabled={saving} onClick={() => onSelectSession(route.sessionId)} className="mb-6 text-sm font-semibold text-primary-strong hover:underline disabled:opacity-50">← Quay lại phiên khám</button>
+          <button type="button" disabled={saving} onClick={() => onSelectSession(route.sessionId)} className="mb-6 text-sm font-semibold text-primary-strong hover:underline disabled:opacity-50">← Back to checkup session</button>
         ) : (
-          <button type="button" disabled={saving} onClick={onClose} className="mb-6 text-sm font-semibold text-primary-strong hover:underline disabled:opacity-50">← Trang chủ</button>
+          <button type="button" disabled={saving} onClick={onClose} className="mb-6 text-sm font-semibold text-primary-strong hover:underline disabled:opacity-50">← Home</button>
         )}
         <Card as="header" className="mb-6 p-6 sm:p-8">
           <p className="text-xs font-bold uppercase tracking-widest text-primary-strong">SchoolHealth · Nurse</p>
-          <h1 className="mt-2 font-display text-3xl font-bold">Nhập kết quả khám sức khỏe</h1>
-          <p className="mt-2 text-sm leading-6 text-muted">Kết quả và BMI hỗ trợ ghi nhận thông tin; quyết định theo dõi do nhân viên y tế lựa chọn.</p>
+          <h1 className="mt-2 font-display text-3xl font-bold">Record checkup results</h1>
+          <p className="mt-2 text-sm leading-6 text-muted">Results and BMI support record keeping; health staff select the follow-up status.</p>
           <Button variant="outline" disabled={saving} onClick={() => onSelectSession(null)} className="mt-4">Browse checkup sessions</Button>
         </Card>
 
@@ -362,19 +362,19 @@ export function NurseCheckupEntry({
           <p role="status" className="rounded-3xl border border-border bg-white p-6 text-sm text-muted">Loading your Nurse session…</p>
         ) : (
           <>
-            <Card as="section" aria-label="Chọn phiên khám và học sinh" className="mb-4 p-5 sm:p-6">
-              <ol aria-label="Các bước nhập kết quả" className="mb-6 grid gap-2 sm:grid-cols-3">
+            <Card as="section" aria-label="Select a checkup session and student" className="mb-4 p-5 sm:p-6">
+              <ol aria-label="Result entry steps" className="mb-6 grid gap-2 sm:grid-cols-3">
                 {[
-                  { label: '1. Chọn phiên khám' },
-                  { label: '2. Chọn học sinh' },
-                  { label: '3. Nhập kết quả' },
+                  { label: '1. Select a checkup session' },
+                  { label: '2. Select a student' },
+                  { label: '3. Enter results' },
                 ].map((step, index) => (
                   <li key={step.label} aria-current={index === activeStep ? 'step' : undefined} className={`rounded-control border px-3 py-2 text-sm font-semibold ${index < activeStep ? 'border-primary bg-primary-soft text-primary-strong' : index === activeStep ? 'border-secondary bg-secondary-soft text-secondary-strong' : 'border-border bg-surface text-muted'}`}>
                     <span className="mr-2" aria-hidden="true">{index < activeStep ? '✓' : '○'}</span>{step.label}
                   </li>
                 ))}
               </ol>
-              <label className="grid gap-1 text-sm font-semibold">Phiên khám
+              <label className="grid gap-1 text-sm font-semibold">Checkup session
                 <Select value={sessionId} disabled={saving || (route.kind === 'result-entry' && route.sessionId !== null)} onChange={(event) => {
                   if (savingRef.current) return
                   rosterAbortRef.current?.abort()
@@ -387,57 +387,57 @@ export function NurseCheckupEntry({
                   setSessionId(event.target.value)
                   setStudents([])
                 }} className="font-normal">
-                  <option value="">Chọn phiên khám</option>
+                  <option value="">Select a checkup session</option>
                   {sessions.map((session) => <option key={session.id} value={session.id}>{session.title} · {session.checkup_date}</option>)}
                 </Select>
               </label>
               <form onSubmit={searchStudents} className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <label className="grid flex-1 gap-1 text-sm font-semibold">Tìm theo tên hoặc Mã học sinh
-                  <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nhập tên hoặc mã" className="font-normal" />
+                <label className="grid flex-1 gap-1 text-sm font-semibold">Search by name or student ID
+                  <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Enter a name or ID" className="font-normal" />
                 </label>
-                <Button type="submit" variant="outline" loading={busy && route.kind === 'result-entry'} disabled={saving || !sessionId} className="self-end">Tìm học sinh</Button>
+                <Button type="submit" variant="outline" loading={busy && route.kind === 'result-entry'} disabled={saving || !sessionId} className="self-end">Find students</Button>
               </form>
-              {busy && route.kind === 'result-entry' && <p role="status" className="mt-3 text-sm text-muted">Đang tải học sinh trong phiên…</p>}
+              {busy && route.kind === 'result-entry' && <p role="status" className="mt-3 text-sm text-muted">Loading session participants…</p>}
               {students.length > 0 && <div className="mt-3 grid gap-2 sm:grid-cols-2">{students.map((item) => (
                 <button type="button" key={item.id} disabled={saving} aria-pressed={student?.id === item.id} onClick={() => void selectStudent(item)} className={`rounded-xl border p-3 text-left disabled:cursor-not-allowed disabled:opacity-60 ${student?.id === item.id ? 'border-primary bg-primary-soft' : 'border-border hover:bg-background'}`}>
-                  <span className="block font-semibold">{item.full_name}</span><span className="text-sm text-muted">Mã: {item.student_code} · Lớp {item.class_name}</span>
+                  <span className="block font-semibold">{item.full_name}</span><span className="text-sm text-muted">ID: {item.student_code} · Class {item.class_name}</span>
                 </button>
               ))}</div>}
-              {students.length === 0 && sessionId && !busy && <p className="mt-3 text-sm text-muted">Tìm kiếm chỉ hiển thị học sinh tham gia phiên khám đã chọn.</p>}
+              {students.length === 0 && sessionId && !busy && <p className="mt-3 text-sm text-muted">Search only shows students participating in the selected checkup session.</p>}
             </Card>
 
             {student && <Card as="form" onSubmit={saveResult} className="grid gap-4 p-5 sm:p-8">
-              <div className="rounded-2xl bg-background p-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted">Học sinh được chọn</p><p className="mt-1 font-display text-xl font-bold">{student.full_name}</p><p className="text-sm text-muted">Mã {student.student_code} · Lớp {student.class_name}</p></div>
-              {resultLoading && <p role="status" className="text-sm text-muted">Đang tải kết quả đã lưu…</p>}
+              <div className="rounded-2xl bg-background p-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted">Selected student</p><p className="mt-1 font-display text-xl font-bold">{student.full_name}</p><p className="text-sm text-muted">ID {student.student_code} · Class {student.class_name}</p></div>
+              {resultLoading && <p role="status" className="text-sm text-muted">Loading saved result…</p>}
               {resultLoadState === 'error' && (
                 <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                  <p className="text-sm text-red-800">Chưa tải được kết quả. Form được khóa để bảo vệ dữ liệu đã lưu.</p>
+                  <p className="text-sm text-red-800">The result could not be loaded. The form is locked to protect saved data.</p>
                   <Button type="button" variant="outline" disabled={saving} onClick={() => void selectStudent(student)} className="mt-3">
-                    Tải lại kết quả
+                    Reload result
                   </Button>
                 </div>
               )}
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-1 text-sm font-semibold">Chiều cao (cm)
+                <label className="grid gap-1 text-sm font-semibold">Height (cm)
                   <Input required disabled={!resultEditable || saving} type="number" min="0.1" max="9999.9" step="0.1" value={height} onChange={(event) => setHeight(event.target.value)} className="font-normal" />
                 </label>
-                <label className="grid gap-1 text-sm font-semibold">Cân nặng (kg)
+                <label className="grid gap-1 text-sm font-semibold">Weight (kg)
                   <Input required disabled={!resultEditable || saving} type="number" min="0.1" max="999.9" step="0.1" value={weight} onChange={(event) => setWeight(event.target.value)} className="font-normal" />
                 </label>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-1 text-sm font-semibold">Thị lực (tùy chọn)
+                <label className="grid gap-1 text-sm font-semibold">Vision (optional)
                   <Input disabled={!resultEditable || saving} value={vision} onChange={(event) => setVision(event.target.value)} maxLength={2000} className="font-normal" />
                 </label>
-                <label className="grid gap-1 text-sm font-semibold">Trạng thái theo dõi do Nurse chọn
+                <label className="grid gap-1 text-sm font-semibold">Follow-up status selected by Nurse
                   <Select disabled={!resultEditable || saving} value={status} onChange={(event) => setStatus(event.target.value as Status)} className="font-normal"><option>Normal</option><option>Needs Follow-up</option></Select>
                 </label>
               </div>
-              <label className="grid gap-1 text-sm font-semibold">Ghi chú (tùy chọn)
+              <label className="grid gap-1 text-sm font-semibold">Notes (optional)
                 <textarea disabled={!resultEditable || saving} value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={5000} rows={3} className="rounded-xl border border-border px-3 py-2.5 font-normal disabled:opacity-60" />
               </label>
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-primary-soft p-4"><span className="font-semibold">BMI tính toán</span><output aria-live="polite" className="font-display text-2xl font-bold">{formatBmi(bmi)}</output></div>
-              <Button type="submit" loading={saving} loadingLabel="Đang lưu…" disabled={busy || !resultEditable} className="w-full sm:w-fit">Lưu / cập nhật kết quả</Button>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-primary-soft p-4"><span className="font-semibold">Calculated BMI</span><output aria-live="polite" className="font-display text-2xl font-bold">{formatBmi(bmi)}</output></div>
+              <Button type="submit" loading={saving} loadingLabel="Saving…" disabled={busy || !resultEditable} className="w-full sm:w-fit">Save / update result</Button>
             </Card>}
           </>
         )}

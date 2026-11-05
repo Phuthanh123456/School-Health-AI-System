@@ -1,4 +1,9 @@
+import os
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -24,6 +29,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+frontend_dist = os.getenv("FRONTEND_DIST")
+if frontend_dist:
+    frontend_path = Path(frontend_dist).resolve()
+    if not (frontend_path / "index.html").is_file():
+        raise RuntimeError("FRONTEND_DIST must contain the compiled frontend")
+
+    def frontend_page():
+        return FileResponse(frontend_path / "index.html", headers={"Cache-Control": "no-cache"})
+
+    for page in ("/", "/home", "/login", "/nurse", "/admin", "/admin/overview", "/admin/insights", "/parent"):
+        app.add_api_route(page, frontend_page, methods=["GET"], include_in_schema=False)
+    for folder in ("assets", "images"):
+        if (frontend_path / folder).is_dir():
+            app.mount(f"/{folder}", StaticFiles(directory=frontend_path / folder), name=folder)
+
 app.include_router(api_router)
 
 
@@ -33,7 +53,7 @@ async def validation_error(request, exc):
         return JSONResponse(status_code=422, content={"detail": "Invalid request fields."}, headers={"Cache-Control": "no-store"})
     # Do not echo rejected names, notes, IDs, or raw request bodies to clients.
     if request.url.path == "/api/admin/ai-insights":
-        return JSONResponse(status_code=422, content={"detail": "Dữ liệu yêu cầu không hợp lệ. Chỉ chấp nhận các trường thống kê đã định nghĩa."})
+        return JSONResponse(status_code=422, content={"detail": "Invalid request data. Only the defined aggregate fields are accepted."})
     return await request_validation_exception_handler(request, exc)
 
 
