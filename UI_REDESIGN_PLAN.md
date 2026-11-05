@@ -2,7 +2,7 @@
 
 ## Purpose and guardrails
 
-This plan prepares a staged visual and interaction redesign of the existing SchoolHealth frontend. M0 is a baseline audit only. No application UI, routes, API contracts, authentication, authorization, business rules, calculations, or schemas were changed during M0.
+This plan prepares a staged visual and interaction redesign of the existing SchoolHealth frontend. M0 was a baseline audit only; M1 established shared tokens and UI primitives. No route, API contract, authentication, authorization, business rule, health calculation, or schema was changed in either milestone.
 
 Implementation must stay on the existing React, TypeScript, Vite, Tailwind CSS 4, and Recharts stack. Work should be limited to presentation and client-side composition. The current implementation is the source of truth for behavior until a separately reviewed product requirement changes it.
 
@@ -41,6 +41,14 @@ Implementation must stay on the existing React, TypeScript, Vite, Tailwind CSS 4
 | `/parent` | Parent profile and linked-child health dashboard | Parent | `GET /api/parent/dashboard`; displays each authorized linked child and saved checkup history. |
 | Other paths | Public landing fallback | Public | Do not invent routes as part of the shell redesign. |
 
+## M1 design-system primitives
+
+`frontend/src/styles.css` now defines the requested semantic color, radius, and minimal card-shadow tokens. Existing utility token names (`primary`, `primary-strong`, `primary-soft`, `on-primary`, `background`, `foreground`, `muted`, `subtle`, `border`, `sky-soft`, and `sky-mid`) remain available as aliases or compatible semantic values for current screens.
+
+Reusable components live in `frontend/src/components/ui/` and are exported by `index.ts`: `Button` (variant/size/loading and native disabled behavior), `Card` (semantic `div`/`section`/`article`), `Badge` (neutral/info/success/warning/danger), `Input` and `Select` (native controls with helper/error descriptions), `Dialog` (controlled native modal with Escape cancellation), `Skeleton` (decorative placeholder for an enclosing announced busy region), `EmptyState` (labeled section and optional action), and `PageHeader` (page-level heading, context, and actions). Form labels remain the consuming screen's responsibility. These primitives contain no student or patient data and are not wired into existing screens until later milestones.
+
+M1 checks passed: lint, typecheck, build, and `npm test` (3 BMI unit tests, 14 Nurse workflow tests, and 6 UI primitive tests). The npm test script now explicitly includes both TSX suites so new component tests are not silently skipped on Windows.
+
 ## API and data contracts to preserve
 
 These shapes are defined in the frontend API clients and the matching backend schemas. Do not rename fields, alter methods, or move health calculations into presentation components.
@@ -72,7 +80,7 @@ These shapes are defined in the frontend API clients and the matching backend sc
 | Milestone | Outcome | Main dependencies | Completion evidence |
 | --- | --- | --- | --- |
 | M0 | Baseline audit and plan | Existing repository and local toolchain | Route/API/invariant inventory, passing baseline checks, synthetic screenshots, these planning documents. |
-| M1 | Semantic visual tokens and reusable accessible primitives | M0 inventory; Tailwind 4 global CSS | Tokens are additive; Button, Card, Badge, Input, Select, Dialog, Skeleton, EmptyState, PageHeader have focused component tests and preserve old classes. |
+| M1 | **Complete:** semantic visual tokens and reusable accessible primitives | M0 inventory; Tailwind 4 global CSS | Requested tokens and aliases are in place; all nine primitives have focused tests; existing screens compile without component migration. |
 | M2 | Responsive role-aware shared shell | M1 primitives; existing `App.tsx`, `RoleWorkspace.tsx`, auth contract | Every existing route/deep link and role guard works; accessible desktop/mobile navigation, one clear header/sign-out affordance, no lost Nurse state. |
 | M3 | Admin school overview redesign | M1/M2; current dashboard response | Existing KPI definitions and chart use only API data; AI panel remains present; zero/loading/error/retry/accessibility behavior verified. |
 | M4 | Nurse task-oriented workflow redesign | M1/M2; M0 Nurse race/concurrency invariants | Profiles, session selection, eligible student selection, result read/edit/save work with unchanged API and calculation semantics. |

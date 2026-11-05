@@ -1,6 +1,6 @@
 # UI Redesign Work Breakdown (M0–M9)
 
-This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0 is complete as documentation and baseline evidence only. M1–M9 are planned work and must not be considered implemented until separately completed and reviewed.
+This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0 is complete as documentation and baseline evidence; M1 is complete as a reusable design system. M2–M9 remain planned and must not be considered implemented until separately completed and reviewed.
 
 ## M0 — Baseline audit and preparation (complete)
 
@@ -14,15 +14,17 @@ This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b2
 
 **Risks / follow-up:** Before a PR, fetch/rebase the actual current `dev` branch and confirm the team agrees this audited frontend snapshot is the one to redesign. The outer workspace's untracked `.sprint2-worktree/` folder was not changed by M0; the commit below, if made, belongs to the nested SchoolHealth repository.
 
-## M1 — Hybrid Healthcare design system
+## M1 — Hybrid Healthcare design system (complete)
 
-**Files:** `frontend/src/styles.css`; add reusable primitives under `frontend/src/components/ui/` or the agreed existing component convention; add focused tests under `frontend/tests/`; update this WBS and plan.
+**Files:** `frontend/src/styles.css`; `frontend/src/components/ui/{Button,Card,Badge,Input,Select,Dialog,Skeleton,EmptyState,PageHeader,index}.tsx` (the barrel is `.ts`); `frontend/tests/ui-primitives.test.tsx`; `frontend/package.json`; this WBS and `UI_REDESIGN_PLAN.md`.
 
-**Dependencies:** M0 inventory. Keep React 19, TypeScript, Vite 7, Tailwind 4 and existing dependency versions. No new package unless an accepted requirement cannot be met with the current stack.
+**Dependencies:** M0 inventory. Kept React 19, TypeScript, Vite 7, Tailwind 4 and all installed dependencies; no package was added.
 
-**Acceptance criteria:** Add semantic tokens for primary `#0F766E`, secondary `#2563EB`, background `#F7FAFC`, surface `#FFFFFF`, and text `#172B4D` without removing old Tailwind theme classes. Provide accessible Button, Card, Badge, Input, Select, Dialog, Skeleton, EmptyState, and PageHeader primitives with disabled, loading, error, and visible keyboard-focus styles where appropriate. Keep native semantic controls and avoid patient/student fixtures in components. Add component tests; lint, typecheck, build, and test pass.
+**Acceptance criteria met:** Semantic tokens include primary `#0F766E`, secondary `#2563EB`, background `#F7FAFC`, surface `#FFFFFF`, and text `#172B4D`. Existing Tailwind token names are preserved as compatible semantic values/aliases. Implemented `Button`, `Card`, `Badge`, `Input`, `Select`, native modal `Dialog`, `Skeleton`, `EmptyState`, and `PageHeader`. Controls use native semantics, visible focus, disabled/loading/error styles, helper/error descriptions where applicable, and no embedded student/patient fixtures. Six component tests cover loading/disabled buttons, semantic cards/status badges, input/select descriptions, dialog Escape/close behavior, skeleton/empty state, and page heading/actions. The npm script explicitly includes the new TSX suite.
 
-**Regression risks:** Tailwind 4 token naming can alter existing utility output; global color/font changes can reduce contrast or affect all old screens; Dialog focus/escape behavior can conflict with native dialog usage. Compare baseline screenshots and test native keyboard behavior.
+**Validation:** `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test` passed after the implementation. `npm test` reports 3 BMI unit tests + 20 Vitest tests passed (14 existing Nurse workflow tests, 6 new primitive tests).
+
+**Regression risks:** The new semantic palette intentionally changes colors globally through backward-compatible token names. Existing screens compile unchanged; visual rework/use of primitives is deferred to M2–M7. Native dialog behavior should be rechecked in browser integration tests when a consuming screen adopts it.
 
 ## M2 — Shared responsive application shell
 
