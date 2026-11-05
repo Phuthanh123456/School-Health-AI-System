@@ -1,6 +1,6 @@
 # UI Redesign Work Breakdown (M0–M9)
 
-This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M4 are complete through separately committed milestones; M5–M9 remain planned and must not be considered implemented until separately completed and reviewed.
+This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M5 are complete through separately committed milestones; M6–M9 remain planned and must not be considered implemented until separately completed and reviewed.
 
 ## M0 — Baseline audit and preparation (complete)
 
@@ -62,15 +62,17 @@ This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b2
 
 **Regression risks:** A delayed response applying to a different student, saving after a failed read, stale BMI/status, accidental duplicate result, session switch leaving search disabled, or a visual form refactor discarding drafts. Retain the dedicated async regression suite when changing Nurse forms. Browser runner teardown still requires manually starting Vite in this environment.
 
-## M5 — Parent family dashboard
+## M5 — Parent family dashboard (complete)
 
-**Files:** `frontend/src/ParentDashboard.tsx`, `managementApi.ts`, `useManagementResource.ts` (preserve contracts), `RoleWorkspace.tsx`, Parent tests.
+**Files:** `frontend/src/ParentDashboard.tsx`, new lazy `frontend/src/ParentHealthTrends.tsx`, and `frontend/tests/management.spec.ts`. Existing `managementApi.ts`, `useManagementResource.ts`, and `RoleWorkspace.tsx` behavior and contracts are unchanged.
 
 **Dependencies:** M1 and M2.
 
-**Acceptance criteria:** Present the authenticated parent's profile, linked children, latest available checkup and history with clear labels. Only render children returned by `/api/parent/dashboard`; preserve the existing empty-parent, no-child, no-checkup, loading, error/retry, and refresh behavior. Use no extra parent/child API requests or fabricated status. Validate readability for multiple children, long notes, and small viewports.
+**Acceptance criteria met:** Presents the authenticated Parent profile, linked child count, keyboard-operable child selector for multiple children, one focused child record, profile information, latest saved checkup, measurement cards with explicit units/missing values, and expandable checkup history. Empty-parent, no-child, no-checkup, loading, error/retry, and refresh behavior remain. Only children and checkups from `/api/parent/dashboard` are rendered; no extra API requests, status inference, diagnosis, or fabricated values were added. Lazy height/weight trends appear only when each has at least two real observations; missing values are omitted, measurements use separate unit scales, and an informational note makes chart scope clear.
 
-**Regression risks:** Showing another parent's child data, overemphasizing nullable values as negative health findings, hiding an empty state, or introducing unsupported actions/edit controls.
+**Validation:** `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test` passed (3 BMI tests and 24 Vitest tests). Parent browser regression passed 7/7 with synthetic responses, including multiple-child switching, actual-history charts, no linked children, no latest result, API failure/retry, role access, and a 390px mobile viewport with no horizontal overflow. Browser checks used a manually started Vite server.
+
+**Regression risks:** Showing another parent's child data, overemphasizing nullable values as negative health findings, hiding an empty state, introducing unsupported actions/edit controls, or changing unit semantics in the history charts. Browser runner teardown still requires manually starting Vite in this environment.
 
 ## M6 — Public landing and sign-in
 

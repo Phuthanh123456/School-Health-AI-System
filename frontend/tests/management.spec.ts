@@ -59,15 +59,26 @@ test('Admin can navigate from management to overview and generate insights for r
 
 test('Parent sees their profile and multiple linked children with history', async ({ page }) => {
   await login(page, 'parent')
-  const children = [record(), record('S3')].map(row => ({ ...row, checkups: row.latest_checkup ? [row.latest_checkup] : [] }))
+  const firstChild = record()
+  const olderCheckup = { ...firstChild.latest_checkup!, session_id: 'SESSION0', title: 'Earlier checkup', checkup_date: '2026-10-03', height_cm: 148, weight_kg: 43, bmi: 19.63 }
+  const secondChild = record('S3')
+  const children = [
+    { ...firstChild, checkups: [olderCheckup, firstChild.latest_checkup!] },
+    { ...secondChild, latest_checkup: null, checkups: [] },
+  ]
   await page.route('**/api/parent/dashboard', route => route.fulfill({ json: { parent: { ...parent1, relationship: null }, children } satisfies ParentOverview }))
   await page.goto('/parent')
   await expect(page.getByRole('heading', { name: "Your family's health" })).toBeVisible()
-  await expect(page.getByText('Synthetic S1', { exact: true })).toBeVisible()
-  await expect(page.getByText('Synthetic S3', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Synthetic S1' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Synthetic S3' })).toBeVisible()
   await expect(page.getByText(parent1.email, { exact: true })).toBeVisible()
-  await page.getByText('Checkup history (1)', { exact: true }).first().click()
+  await expect(page.getByRole('img', { name: /Recorded height by checkup date/ })).toBeVisible()
+  await expect(page.getByRole('img', { name: /Recorded weight by checkup date/ })).toBeVisible()
+  await page.getByText('Checkup history (2)', { exact: true }).click()
   await expect(page.getByText('Synthetic checkup note').first()).toBeVisible()
+  await page.getByRole('button', { name: 'Synthetic S3' }).click()
+  await expect(page.getByRole('heading', { name: 'Synthetic S3' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'No saved checkup result' })).toBeVisible()
   const stored = await page.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage } }))
   expect(JSON.stringify(stored)).not.toContain('Synthetic health note')
   expect(JSON.stringify(stored)).not.toContain('Synthetic allergy')
@@ -79,6 +90,21 @@ test('Parent without children retains their profile and clear empty state', asyn
   await page.goto('/parent')
   await expect(page.getByRole('heading', { name: 'No children linked yet' })).toBeVisible()
   await expect(page.getByText(parent1.id, { exact: true })).toBeVisible()
+})
+
+test('Parent health summary remains usable on a narrow phone viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page, 'parent')
+  const child = record('MOBILE1')
+  await page.route('**/api/parent/dashboard', route => route.fulfill({ json: {
+    parent: { ...parent1, relationship: null },
+    children: [{ ...child, checkups: child.latest_checkup ? [child.latest_checkup] : [] }],
+  } satisfies ParentOverview }))
+  await page.goto('/parent')
+
+  await expect(page.getByRole('heading', { name: 'Your family\'s health' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Latest saved checkup' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
 test('Parent error hides technical details and supports retry', async ({ page }) => {
