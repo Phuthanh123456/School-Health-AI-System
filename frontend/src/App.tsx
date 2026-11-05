@@ -96,10 +96,10 @@ function LandingPage() {
             <div className="relative rounded-3xl border border-border bg-white p-4 shadow-sm sm:p-6">
               <div className="flex items-start justify-between border-b border-border pb-5">
                 <div>
-                  <p className="text-xs font-medium text-subtle">HEALTH OVERVIEW</p>
+                  <p className="text-xs font-medium text-subtle">SYNTHETIC DEMO PREVIEW</p>
                   <h2 className="mt-1 font-display text-xl font-bold tracking-tight">One continuous journey</h2>
                 </div>
-                <span className="rounded-full bg-primary-soft px-3 py-1.5 text-xs font-semibold text-primary-strong">2025 — 2026</span>
+                <span className="rounded-full bg-primary-soft px-3 py-1.5 text-xs font-semibold text-primary-strong">Illustrative only</span>
               </div>
 
               <div className="mt-5 grid grid-cols-2 gap-3">

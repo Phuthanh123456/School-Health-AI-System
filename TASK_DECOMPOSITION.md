@@ -1,6 +1,6 @@
 # UI Redesign Work Breakdown (M0–M9)
 
-This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M6 are complete through separately committed milestones; M7 is complete in its own commit; M8–M9 remain planned until separately validated and committed.
+This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M8 are complete through separately committed milestones; M9 remains planned until final regression and handoff checks are completed and committed.
 
 ## M0 — Baseline audit and preparation (complete)
 
@@ -98,7 +98,7 @@ This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b2
 
 **Implementation and validation:** Refined the aggregate summary, computed observations, generated recommendations, privacy scope, and non-clinical disclaimer using the existing UI primitives. Preserved request cancellation and the aggregate-only payload. `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test` passed (3 BMI and 24 Vitest tests); the AI insights Playwright suite passed 14/14 against synthetic responses.
 
-## M8 — Public landing and sign-in
+## M8 — Public landing and sign-in (complete)
 
 **Files:** `frontend/src/App.tsx` landing content, `frontend/src/LoginPage.tsx`, and relevant browser tests. `auth.ts` is read-only for contract verification.
 
@@ -107,6 +107,8 @@ This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b2
 **Acceptance criteria:** Redesign Landing and Login with the same Hybrid Healthcare tokens. Landing explains existing capabilities for school staff and parents, uses clearly illustrative synthetic visuals, and provides a strong sign-in call to action. Login has a polished responsive layout, accessible native controls, inline validation/error/pending feedback, and retains the existing password visibility control. Preserve `/`, `/login`, `/home`, login callback, `POST /auth/login`, session restoration, role redirects, and all security behavior. Do not add role selection, registration, or login providers.
 
 **Regression risks:** Deep-link or history regressions, form submission on Enter, lost labels/autocomplete, double-submit, invalid password toggle semantics, unsupported product claims, or non-reduced-motion-safe animation.
+
+**Implementation and validation:** Reworked the responsive sign-in page around the shared Button, Card, and Input primitives, added role-aware product context with clearly synthetic illustrative content, and retained all public paths and auth callbacks. Added five Playwright cases covering landing links, field validation, visibility toggle, sign-in failure/retry, pending duplicate-submit protection, and role redirect. `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test` passed (3 BMI and 24 Vitest tests); Playwright landing/login passed 5/5.
 
 ## M9 — Final QA, accessibility and polish
 
