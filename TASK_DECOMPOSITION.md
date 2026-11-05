@@ -1,6 +1,6 @@
 # UI Redesign Work Breakdown (M0–M9)
 
-This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0 is complete as documentation and baseline evidence; M1 is complete as a reusable design system. M2–M9 remain planned and must not be considered implemented until separately completed and reviewed.
+This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M3 are complete through separately committed milestones; M4–M9 remain planned and must not be considered implemented until separately completed and reviewed.
 
 ## M0 — Baseline audit and preparation (complete)
 
@@ -38,15 +38,17 @@ This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b2
 
 **Regression risks:** App screens now sit inside the shared shell, so later layout changes must avoid nested `<main>` elements, duplicate navigation, or resetting Nurse state. The browser suite should be rerun using a manually started Vite server if Playwright `webServer` teardown continues to hang.
 
-## M3 — Admin health overview
+## M3 — Admin health overview (complete)
 
-**Files:** `frontend/src/AdminDashboard.tsx`, `StatusDistributionChart.tsx`, `AIInsightsPanel.tsx` (integration retained), shared shell/primitives, relevant `frontend/tests/dashboard.spec.ts` and new focused UI tests.
+**Files:** `frontend/src/AdminDashboard.tsx`, shared `Button`, `Card`, `EmptyState`, `PageHeader`, and `Skeleton` primitives; `frontend/tests/dashboard.spec.ts`. Existing `StatusDistributionChart.tsx` and `AIInsightsPanel.tsx` remain integrated without contract changes.
 
 **Dependencies:** M1 and M2.
 
-**Acceptance criteria:** Header, responsive existing KPI cards, existing status distribution chart, and AI Insights appear in a clear hierarchy. Use only `/api/admin/dashboard` fields: `total_students`, `completed_checkups`, `status_counts.normal`, and `status_counts.needs_follow_up`. Preserve response validation, request cancellation, active-request guard, 15-second timeout, authenticated access, lazy chart import, exact count definitions, and current empty/loading/error/retry states. Include an accessible chart description or equivalent text/table. Verify zero-result, successful, loading and error states.
+**Acceptance criteria met:** Added a responsive page header, KPI cards, status distribution and table, existing AI Insights section, readable metric definitions, and explicit zero-result/loading/error/retry states. Data still comes only from `/api/admin/dashboard` fields `total_students`, `completed_checkups`, `status_counts.normal`, and `status_counts.needs_follow_up`. Preserved response validation, request cancellation, active-request guard, 15-second timeout, authenticated access, lazy chart import, and exact count definitions. Chart retains an accessible description and exact-count table.
 
-**Regression risks:** Re-labeling record counts as unique students, inventing unsupported trends/percentages/filters, eagerly loading Recharts, losing timeouts/abort behavior, or hiding errors while showing stale values.
+**Validation:** `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test` passed (3 BMI tests and 24 Vitest tests). Admin dashboard Playwright coverage passed 4/4 for successful data, zero results, initial loading, and API failure/retry using synthetic responses and a manually started Vite server.
+
+**Regression risks:** Re-labeling record counts as unique students, inventing unsupported trends/percentages/filters, eagerly loading Recharts, losing timeouts/abort behavior, or hiding errors while showing stale values. Browser test runner teardown still requires manually starting Vite in this environment.
 
 ## M4 — Nurse workspace
 

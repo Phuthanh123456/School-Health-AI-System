@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { authenticatedFetch, getAccessToken } from './auth'
 import AIInsightsPanel from './AIInsightsPanel'
+import { Button, Card, EmptyState, PageHeader, Skeleton } from './components/ui'
 
 const StatusDistributionChart = lazy(() => import('./StatusDistributionChart'))
 
@@ -42,14 +43,14 @@ function MetricCard({ label, value, detail, accent }: {
   accent: string
 }) {
   return (
-    <article className="relative overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
+    <Card as="article" className="relative overflow-hidden p-5 sm:p-6">
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${accent}`} />
       <h2 className="text-sm font-semibold text-muted">{label}</h2>
       <p className="mt-3 font-display text-4xl font-bold tracking-tight text-foreground" aria-label={`${value} ${label.toLowerCase()}`}>
         {value.toLocaleString()}
       </p>
       <p className="mt-2 text-xs leading-5 text-subtle">{detail}</p>
-    </article>
+    </Card>
   )
 }
 
@@ -105,41 +106,31 @@ export default function AdminDashboard() {
   const hasResults = (overview?.completed_checkups ?? 0) > 0
 
   return (
-    <div className="text-foreground">
+    <div className="text-text">
       <div className="mx-auto max-w-7xl">
-        <section className="py-8 sm:py-10" aria-labelledby="overview-title">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-strong">School health</p>
-          <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h1 id="overview-title" className="font-display text-3xl font-bold tracking-tight sm:text-4xl">School overview</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base">
-                A summary of students and saved checkup records across the school dataset.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setReload((attempt) => attempt + 1)}
-              disabled={loading}
-              className="min-h-11 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
-            >
-              {loading ? 'Loading…' : 'Refresh data'}
-            </button>
-          </div>
-        </section>
+        <PageHeader
+          className="py-8 sm:py-10"
+          eyebrow="School health"
+          title="School overview"
+          description="A summary of students and saved checkup records across the school dataset."
+          actions={<Button onClick={() => setReload((attempt) => attempt + 1)} loading={loading} loadingLabel="Loading data…">Refresh data</Button>}
+        />
 
         {error && (
-          <section role="alert" className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+          <section role="alert" className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-card border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
             <p>{error}</p>
-            <button type="button" onClick={() => setReload((attempt) => attempt + 1)} className="min-h-10 rounded-full border border-amber-700 px-4 py-2 font-semibold hover:bg-amber-100">
-              Try again
-            </button>
+            <Button variant="outline" onClick={() => setReload((attempt) => attempt + 1)}>Try again</Button>
           </section>
         )}
 
         {loading && !overview ? (
           <section aria-label="Loading school health statistics" aria-busy="true" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[1, 2, 3, 4].map((item) => (
-              <div key={item} className="h-36 animate-pulse rounded-2xl border border-border bg-white/70" />
+              <Card key={item} aria-hidden="true" className="space-y-4 p-5 sm:p-6">
+                <Skeleton shape="text" className="w-2/5" />
+                <Skeleton shape="text" className="h-10 w-1/3" />
+                <Skeleton shape="text" className="w-4/5" />
+              </Card>
             ))}
             <p role="status" className="sr-only">Loading school health statistics…</p>
           </section>
@@ -147,7 +138,7 @@ export default function AdminDashboard() {
           <>
             <section aria-label="School health summary metrics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard label="Students" value={overview.total_students} detail="Distinct students in the dataset" accent="bg-primary" />
-              <MetricCard label="Completed checkups" value={overview.completed_checkups} detail="Saved student and session records" accent="bg-sky-400" />
+              <MetricCard label="Completed checkups" value={overview.completed_checkups} detail="Saved student and session records" accent="bg-secondary" />
               <MetricCard label="Normal" value={overview.status_counts.normal} detail="Records with a Nurse-selected Normal status" accent="bg-primary" />
               <MetricCard label="Needs follow-up" value={overview.status_counts.needs_follow_up} detail="Records with a Nurse-selected follow-up status" accent="bg-amber-500" />
             </section>
@@ -158,25 +149,20 @@ export default function AdminDashboard() {
               followups_pending: overview.status_counts.needs_follow_up,
             }} /></div>
             <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)]">
-              <article className="rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
+              <Card as="article" className="p-5 sm:p-6">
                 <div>
                   <h2 className="font-display text-xl font-bold">Checkup status distribution</h2>
                   <p className="mt-1 text-sm leading-6 text-muted">Saved records grouped by the status selected by the Nurse.</p>
                 </div>
                 {hasResults ? (
-                  <Suspense fallback={<p role="status" className="mt-5 grid h-64 place-items-center rounded-xl bg-background text-sm text-muted">Loading chart…</p>}>
+                  <Suspense fallback={<div role="status" className="mt-5 grid h-64 place-items-center rounded-xl bg-background px-5 text-sm text-muted">Loading status chart…</div>}>
                     <StatusDistributionChart
                       normal={overview.status_counts.normal}
                       needsFollowUp={overview.status_counts.needs_follow_up}
                     />
                   </Suspense>
                 ) : (
-                  <div className="mt-5 grid h-48 place-items-center rounded-xl bg-background px-5 text-center">
-                    <div>
-                      <p className="font-semibold">No completed checkups yet</p>
-                      <p className="mt-1 text-sm text-muted">Status counts will appear here after results are saved.</p>
-                    </div>
-                  </div>
+                  <EmptyState className="mt-5" title="No completed checkups yet" description="Status counts will appear here after results are saved." />
                 )}
                 <table className="mt-3 w-full border-t border-border text-left text-sm">
                   <caption className="sr-only">Exact counts for the checkup status chart</caption>
@@ -186,9 +172,9 @@ export default function AdminDashboard() {
                     <tr className="border-t border-border"><th scope="row" className="py-3 font-medium">Needs follow-up</th><td className="py-3 text-right tabular-nums">{overview.status_counts.needs_follow_up.toLocaleString()}</td></tr>
                   </tbody>
                 </table>
-              </article>
+              </Card>
 
-              <aside className="rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
+              <Card as="aside" className="p-5 sm:p-6">
                 <h2 className="font-display text-xl font-bold">How to read these totals</h2>
                 <ul className="mt-4 space-y-4 text-sm leading-6 text-muted">
                   <li><strong className="text-foreground">Students</strong> counts each student once across the dataset.</li>
@@ -198,7 +184,7 @@ export default function AdminDashboard() {
                 <p className="mt-5 rounded-xl bg-background p-4 text-xs leading-5 text-muted">
                   Free-text medical notes are not classified into issue categories. The current dataset has no structured vision or dental issue fields.
                 </p>
-              </aside>
+              </Card>
             </section>
           </>
         )}
