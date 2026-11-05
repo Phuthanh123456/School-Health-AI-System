@@ -1,6 +1,6 @@
 # UI Redesign Work Breakdown (M0–M9)
 
-This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M5 are complete through separately committed milestones; M6–M9 remain planned and must not be considered implemented until separately completed and reviewed.
+This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M6 are complete through separately committed milestones; M7–M9 remain planned and must not be considered complete until separately validated and committed.
 
 ## M0 — Baseline audit and preparation (complete)
 
@@ -74,15 +74,17 @@ This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b2
 
 **Regression risks:** Showing another parent's child data, overemphasizing nullable values as negative health findings, hiding an empty state, introducing unsupported actions/edit controls, or changing unit semantics in the history charts. Browser runner teardown still requires manually starting Vite in this environment.
 
-## M6 — Public landing and sign-in
+## M6 — Admin health management (complete)
 
-**Files:** `frontend/src/App.tsx` landing content, `frontend/src/LoginPage.tsx`, `frontend/src/auth.ts` only for reading/contract verification (auth behavior changes are out of scope), shared primitives and tests.
+**Files:** `frontend/src/AdminHealthManagement.tsx`, shared UI primitives, and `frontend/tests/management.spec.ts`. `managementApi.ts` and assignment behavior are unchanged.
 
-**Dependencies:** M1. M2 integration must preserve public route availability.
+**Dependencies:** M1 primitives and M2 shared shell; existing management API contracts.
 
-**Acceptance criteria:** Improve public landing and login presentation while keeping route behavior, login input validation, password visibility toggle, pending-submit lock, existing error messages, `POST /auth/login` contract and role-based redirect unchanged. The landing illustration remains clearly labeled as illustrative and never suggests real school data. Add visual-state coverage without hardcoded personal data.
+**Acceptance criteria met:** Filter toolbar uses the existing Class, Parent, and Nurse filters only; responsive mobile record cards complement the desktop data table. Assignment actions have accessible labels, badge states, clear loading/empty/error/success feedback, and an accessible native dialog. Pagination reports total records/current page, supports existing page sizes, and retains previous/next/reset behavior. Existing filters, page query parameters, response shape, assignment `PUT`/`DELETE`, `If-Match: assignment_version`, validation, 409/428 conflict lock, reload-before-retry, authorization, and post-save refresh are preserved. No bulk action or new search API was added.
 
-**Regression risks:** Browser history/deep-link regressions, form submit on Enter, lost `autocomplete`/labels, invalid password toggle semantics, double login, or unsupported claims on the public page.
+**Validation:** `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test` passed (3 BMI tests and 24 Vitest tests). The full synthetic-data Playwright management suite passed 12/12, covering filter combination/reset/pagination, assignment add/change/remove, confirmation cancellation, `If-Match`, stale conflict/reload, role boundaries, and adjacent Nurse/Parent regressions.
+
+**Regression risks:** Duplicate Parent/Nurse assignments must continue to replace according to the existing API semantics; never retry a failed write using a stale assignment version. Mobile record details and desktop table must remain equally actionable and screen-reader accessible.
 
 ## M7 — AI Insights presentation
 
@@ -94,22 +96,22 @@ This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b2
 
 **Regression risks:** Exposing student-level or free-text data, promising diagnosis/treatment, fabricated fallback content, mismatched aggregate snapshot, or an AI failure blocking the overview.
 
-## M8 — Cross-role accessibility and responsive review
+## M8 — Public landing and sign-in
 
-**Files:** Components/screens from M1–M7, `frontend/src/styles.css`, responsive/accessibility test coverage, screenshots.
+**Files:** `frontend/src/App.tsx` landing content, `frontend/src/LoginPage.tsx`, and relevant browser tests. `auth.ts` is read-only for contract verification.
 
-**Dependencies:** M1–M7.
+**Dependencies:** M1 shared primitives; preserve public routes and M2 shell/auth boundaries.
 
-**Acceptance criteria:** Keyboard-only review for navigation, dialogs, forms and chart alternatives; visible focus and semantic headings/labels/live regions; responsive review at narrow mobile, tablet and desktop widths; text zoom/long localized content; reduced-motion preferences. Role-restricted links and private data remain hidden from unauthorized roles. Update screenshots with synthetic data only.
+**Acceptance criteria:** Redesign Landing and Login with the same Hybrid Healthcare tokens. Landing explains existing capabilities for school staff and parents, uses clearly illustrative synthetic visuals, and provides a strong sign-in call to action. Login has a polished responsive layout, accessible native controls, inline validation/error/pending feedback, and retains the existing password visibility control. Preserve `/`, `/login`, `/home`, login callback, `POST /auth/login`, session restoration, role redirects, and all security behavior. Do not add role selection, registration, or login providers.
 
-**Regression risks:** CSS-only interactions inaccessible to assistive technology, clipped data tables, invisible focus, inconsistent states between viewport breakpoints, or screenshots accidentally using a real local database.
+**Regression risks:** Deep-link or history regressions, form submission on Enter, lost labels/autocomplete, double-submit, invalid password toggle semantics, unsupported product claims, or non-reduced-motion-safe animation.
 
-## M9 — Integration regression and handoff
+## M9 — Final QA, accessibility and polish
 
-**Files:** Frontend test suites, affected components, WBS/plan/rules, baseline screenshots as needed. Do not alter backend contracts or schemas.
+**Files:** Frontend screens/components/tests from M1–M8; `TASK_DECOMPOSITION.md`, `UI_REDESIGN_PLAN.md`, and new final QA report under `docs/`.
 
-**Dependencies:** M0–M8 accepted and current `dev` branch fetched/reconciled.
+**Dependencies:** M1–M8 committed and current local feature branch; no network fetch or merge is required.
 
-**Acceptance criteria:** Run from `frontend/`: `npm run lint`, `npm run typecheck`, `npm run build`, `npm test`, and the agreed Playwright suite. Review diffs for API/auth/business logic or schema changes; confirm all route and role cases, deep links, async race/submit locks, assignment `If-Match`, and aggregate privacy remain covered. Update synthetic screenshots and record remaining limitations. Commit only the accepted UI/docs work to a reviewable feature branch and open a PR to the agreed target branch after remote access is available.
+**Acceptance criteria:** Run all four required frontend commands plus available Playwright/E2E suites. Review responsive layouts at 320, 375, 768, 1024, and 1440 CSS pixels; keyboard/focus/forms/dialogs/chart alternatives; design-token use; error/loading/empty/success states; overflow; role/privacy boundaries; auth/session, assignment `If-Match`, Nurse save/stale-response, Parent child switching, and AI allowlist. Capture/review screenshots with synthetic data only. Record actual checks, residual limitations, and any fixes in the QA report. Do not claim WCAG conformance without an audit.
 
-**Regression risks:** Combining unfinished milestones, silently changing backend assumptions, stale local `dev`, tests that miss browser specs, real data in screenshots/logs, or merge conflicts with teammates' work.
+**Regression risks:** Treating automated checks as a complete accessibility audit, screenshotting real health data, allowing viewport-specific clipping, weakening tests, or changing backend/API/auth/business rules during polish.
