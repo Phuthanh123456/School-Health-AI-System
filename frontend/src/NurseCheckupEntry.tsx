@@ -341,8 +341,8 @@ export function NurseCheckupEntry({
   }
 
   return (
-    <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-8">
-      <div className="mx-auto max-w-4xl">
+    <div className="text-foreground">
+      <div className="mx-auto max-w-4xl py-2">
         {route.kind === 'result-entry' && route.sessionId ? (
           <button type="button" disabled={saving} onClick={() => onSelectSession(route.sessionId)} className="mb-6 text-sm font-semibold text-primary-strong hover:underline disabled:opacity-50">← Quay lại phiên khám</button>
         ) : (
@@ -429,6 +429,6 @@ export function NurseCheckupEntry({
         {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
         {message && <p role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
       </div>
-    </main>
+    </div>
   )
 }

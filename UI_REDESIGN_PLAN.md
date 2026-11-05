@@ -29,6 +29,12 @@ Implementation must stay on the existing React, TypeScript, Vite, Tailwind CSS 4
 - **Shared screen/layout/API files:** `frontend/src/RoleWorkspace.tsx`, `frontend/src/styles.css`, `frontend/src/managementApi.ts`, `frontend/src/useManagementResource.ts`, and `frontend/src/auth.ts`.
 - **Existing UI/browser tests:** `frontend/tests/dashboard.spec.ts`, `insights.spec.ts`, `management.spec.ts`, `merge-routing.spec.ts`, and `NurseCheckupEntry.test.tsx`; BMI unit coverage is in `frontend/tests/checkupMath.test.mjs`.
 
+## M2 shared shell
+
+The authenticated routes now render inside `frontend/src/AppShell.tsx`. The shared components are `Sidebar.tsx`, `Topbar.tsx`, and `MobileNavigation.tsx`; `navigationConfig.ts` declares only existing role destinations and Nurse's existing in-page section actions. Admin `/admin/overview`, `/admin/insights`, and `/#admin` share one active overview navigation item. Nurse section and workflow route state remain mounted above profile/checkup content. Role checks, session restoration/expiry, role redirects, and sign-out storage behavior remain in the existing `App.tsx`/`auth.ts` flow. Public Landing and Login keep their existing public layouts.
+
+`RoleWorkspace`, AdminDashboard, Nurse profile/checkup pages are content surfaces under the shell; the shared topbar owns the only authenticated sign-out control. The mobile drawer is a native modal dialog with Escape-to-close, initial navigation focus, and focus return to its trigger. A skip link targets the shell's single main content region. Four Vitest tests cover role destinations, Nurse section selection, mobile drawer keyboard/focus behavior, and sign-out. Five Playwright tests cover restored Admin deep links, management navigation, Nurse section switching, Parent authorization/redirect, and mobile navigation. These and three existing routing specs passed (8/8) against a manually started Vite server because the configured Playwright `webServer` process stayed alive after reporting results.
+
 | Route | Current screen | Permitted role / access | Data behavior |
 | --- | --- | --- | --- |
 | `/` | Public product landing page | Public | Static explanatory content and explicitly illustrative chart. |
@@ -81,7 +87,7 @@ These shapes are defined in the frontend API clients and the matching backend sc
 | --- | --- | --- | --- |
 | M0 | Baseline audit and plan | Existing repository and local toolchain | Route/API/invariant inventory, passing baseline checks, synthetic screenshots, these planning documents. |
 | M1 | **Complete:** semantic visual tokens and reusable accessible primitives | M0 inventory; Tailwind 4 global CSS | Requested tokens and aliases are in place; all nine primitives have focused tests; existing screens compile without component migration. |
-| M2 | Responsive role-aware shared shell | M1 primitives; existing `App.tsx`, `RoleWorkspace.tsx`, auth contract | Every existing route/deep link and role guard works; accessible desktop/mobile navigation, one clear header/sign-out affordance, no lost Nurse state. |
+| M2 | **Complete:** responsive role-aware shared shell | M1 primitives; existing `App.tsx`, `RoleWorkspace.tsx`, auth contract | Existing routes/deep links and role guards retained; accessible desktop/mobile navigation, one topbar sign-out, Nurse section/route state retained. |
 | M3 | Admin school overview redesign | M1/M2; current dashboard response | Existing KPI definitions and chart use only API data; AI panel remains present; zero/loading/error/retry/accessibility behavior verified. |
 | M4 | Nurse task-oriented workflow redesign | M1/M2; M0 Nurse race/concurrency invariants | Profiles, session selection, eligible student selection, result read/edit/save work with unchanged API and calculation semantics. |
 | M5 | Parent family dashboard redesign | M1/M2; Parent API contract | Parent identity and only linked children render; empty/loading/error and checkup history states work. |

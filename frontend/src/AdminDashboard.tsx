@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { authenticatedFetch, getAccessToken, signOut } from './auth'
+import { authenticatedFetch, getAccessToken } from './auth'
 import AIInsightsPanel from './AIInsightsPanel'
 
 const StatusDistributionChart = lazy(() => import('./StatusDistributionChart'))
@@ -102,36 +102,11 @@ export default function AdminDashboard() {
     }
   }, [reload, token])
 
-  function handleSignOut() {
-    signOut()
-    window.location.assign('/login')
-  }
-
   const hasResults = (overview?.completed_checkups ?? 0) > 0
 
   return (
-    <main className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-6 sm:py-10 lg:px-8">
+    <div className="text-foreground">
       <div className="mx-auto max-w-7xl">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5">
-          <a href="/" className="font-display text-xl font-bold tracking-tight" aria-label="SchoolHealth home">
-            school<span className="text-primary-strong">health</span>
-          </a>
-          <div className="flex items-center gap-4">
-            <span className="rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-primary-strong">Admin</span>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="min-h-10 rounded-full border border-border bg-white px-4 py-2 text-sm font-semibold hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            >
-              Sign out
-            </button>
-          </div>
-        </header>
-        <nav aria-label="Admin sections" className="flex flex-wrap gap-3 border-b border-border py-4 text-sm font-semibold">
-          <a href="/admin" className="min-h-11 rounded-xl border border-border bg-white px-4 py-3">Health management</a>
-          <a href="/admin/overview" aria-current="page" className="min-h-11 rounded-xl bg-primary-soft px-4 py-3">School overview &amp; AI insights</a>
-        </nav>
-
         <section className="py-8 sm:py-10" aria-labelledby="overview-title">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-strong">School health</p>
           <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
@@ -232,6 +207,6 @@ export default function AdminDashboard() {
           School-wide aggregate data is visible to authorized Admin users only.
         </footer>
       </div>
-    </main>
+    </div>
   )
 }

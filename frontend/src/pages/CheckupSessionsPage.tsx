@@ -125,26 +125,11 @@ function CheckupSessionsPage({
   }, [authorization, selectedSessionId, sessionReload])
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <div className="text-foreground">
       <div className="mx-auto min-h-screen max-w-7xl px-4 sm:px-8">
-        <header className="flex min-h-16 items-center justify-between gap-4 border-b border-border py-3">
-          <a href="#home" onClick={onBackHome} className="flex min-h-11 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-label="Về trang chủ SchoolHealth">
-            <span className="grid size-9 place-items-center rounded-xl bg-primary text-white">
-              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="size-5"><path d="M12 4.25v15.5M4.25 12h15.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
-            </span>
-            <span className="font-display text-base font-extrabold tracking-[-0.04em]">school<span className="text-primary-strong">health</span></span>
-          </a>
-          <span className="hidden rounded-full border border-border bg-white px-3 py-2 text-xs font-semibold text-muted sm:inline-flex">
-            KHU VỰC NHÂN VIÊN Y TẾ
-          </span>
-          <button type="button" onClick={onBackHome} className="inline-flex min-h-11 items-center rounded-full border border-border bg-white px-4 text-sm font-semibold transition-colors duration-150 hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-            Về trang chủ
-          </button>
-        </header>
-
         <section className="py-8 sm:py-10" aria-labelledby="page-title">
           <nav aria-label="Điều hướng đường dẫn" className="mb-5 text-sm text-muted">
-            <a href="#home" onClick={onBackHome} className="rounded underline-offset-4 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Trang chủ</a>
+            <button type="button" onClick={onBackHome} className="rounded underline-offset-4 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Hồ sơ học sinh</button>
             <span aria-hidden="true" className="mx-2">/</span>
             <span aria-current="page" className="font-semibold text-foreground">Đợt khám</span>
           </nav>
@@ -322,7 +307,7 @@ function CheckupSessionsPage({
           </div>
         </section>
       </div>
-    </main>
+    </div>
   )
 }
 

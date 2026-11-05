@@ -7,6 +7,7 @@ These rules apply to the planned UI redesign only. They supplement the repositor
 - Follow the accepted milestone in `TASK_DECOMPOSITION.md`; M0 is audit/preparation only. Do not begin later milestones until their own task is authorized.
 - Continue with the installed React, TypeScript, Vite, Tailwind CSS 4, and Recharts stack. Avoid adding dependencies without an accepted technical need.
 - Shared M1 primitives are in `frontend/src/components/ui/` and exported from its `index.ts`; use them for later screen milestones rather than introducing a parallel control library. Keep form labels in consuming screens, and place skeletons inside an announced `aria-busy`/status region.
+- Authenticated routes use the role-aware shell in `frontend/src/AppShell.tsx`; keep role navigation in sync with `navigationConfig.ts`, and preserve the Nurse section plus result-entry route state while changing shell layout. The shared shell owns sign-out and the main landmark; avoid adding duplicate topbars, navigation, or nested `<main>` landmarks to screen components.
 - Treat visual composition, accessibility, and client-side presentation as the redesign scope. Do not change backend code, API methods/paths/contracts, authentication or authorization rules, health calculations, business rules, or database schemas as UI cleanup.
 - Preserve every current route and deep link in `UI_REDESIGN_PLAN.md`. Do not add routes or install React Router as part of the shell work.
 

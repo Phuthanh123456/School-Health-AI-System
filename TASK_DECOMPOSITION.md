@@ -26,15 +26,17 @@ This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b2
 
 **Regression risks:** The new semantic palette intentionally changes colors globally through backward-compatible token names. Existing screens compile unchanged; visual rework/use of primitives is deferred to M2–M7. Native dialog behavior should be rechecked in browser integration tests when a consuming screen adopts it.
 
-## M2 — Shared responsive application shell
+## M2 — Shared responsive application shell (complete)
 
-**Files:** Add `frontend/src/AppShell.tsx`, `Sidebar.tsx`, `Topbar.tsx`, `MobileNavigation.tsx`, and `navigationConfig.ts`; integrate in `frontend/src/App.tsx` and, if needed, `RoleWorkspace.tsx`. Tests in `frontend/tests/`.
+**Files:** Added `frontend/src/AppShell.tsx`, `Sidebar.tsx`, `Topbar.tsx`, `MobileNavigation.tsx`, and `navigationConfig.ts`; integrated the shell in `frontend/src/App.tsx`; converted `frontend/src/RoleWorkspace.tsx`, `AdminDashboard.tsx`, `NurseStudents.tsx`, `NurseCheckupEntry.tsx`, and `pages/CheckupSessionsPage.tsx` to content-only surfaces; added `frontend/tests/app-shell.test.tsx` and `frontend/tests/app-shell.spec.ts`; updated `frontend/package.json` and this WBS/plan.
 
-**Dependencies:** M1 primitives; existing custom pathname dispatch and current role-specific screens.
+**Dependencies:** M1 primitives; existing custom pathname dispatch and role-specific screens.
 
-**Acceptance criteria:** Desktop has a consistent left navigation; mobile has an accessible drawer that supports focus, Escape to close, and sensible focus return. Navigation is role-aware: Admin management/overview/AI links, Nurse profile/checkup workflows, Parent family dashboard. Preserve `/`, `/login`, `/admin`, `/admin/overview`, `/admin/insights`, `/#admin`, `/nurse`, `/parent`, deep links, role authorization, `restoreSession`, expiry behavior, sign-out, role redirects, and Nurse internal state. Do not add React Router or duplicate headers/sign-out controls. Tests cover role navigation, mobile drawer, session restoration, and direct routes.
+**Acceptance criteria met:** A responsive desktop sidebar and native mobile navigation dialog expose Admin management/overview/AI, Nurse profile/checkup sections, and Parent family dashboard destinations. Mobile navigation has a close control, Escape handling, initial focus and focus return. The shared topbar shows current role, page context, and one sign-out action; a skip link targets the shared main region. The Nurse's section and internal route state are held above the screen content, and entering Checkups from Profiles starts the existing result-entry state. Preserved `/`, `/login`, `/admin`, `/admin/overview`, `/admin/insights`, `/#admin`, `/nurse`, `/parent`, direct links, ProtectedRoute behavior, `roleLandingPaths`, `restoreSession`, expiry, sign-out and redirects. No router or dependency added.
 
-**Regression risks:** Route fallback can accidentally expose a screen; duplicate shell headers or sign-out controls; navigation remounts can reset Nurse workflow state; drawer focus traps or stale session checks.
+**Validation:** Added 4 Vitest shell tests and 5 Playwright navigation tests. Vitest shell tests passed (4/4); the 5 new browser specs plus 3 existing routing specs passed (8/8) against a manually started Vite server. The standard Playwright `webServer` runner remained open after reporting test results, so browser regression was run with a temporary manual-server config. Full frontend lint/typecheck/build/npm-test results are recorded at the M2 commit.
+
+**Regression risks:** App screens now sit inside the shared shell, so later layout changes must avoid nested `<main>` elements, duplicate navigation, or resetting Nurse state. The browser suite should be rerun using a manually started Vite server if Playwright `webServer` teardown continues to hang.
 
 ## M3 — Admin health overview
 

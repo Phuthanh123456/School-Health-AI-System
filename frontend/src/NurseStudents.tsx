@@ -169,8 +169,7 @@ export default function NurseStudents() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-8">
-      <a href="/" className="text-sm font-semibold text-primary-strong underline">Trang chủ SchoolHealth</a>
+    <div className="mx-auto max-w-6xl py-2">
       <header className="my-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-muted">Điều dưỡng · Dữ liệu demo</p>
@@ -217,6 +216,6 @@ export default function NurseStudents() {
           </button>}
         </section>
       </div>
-    </main>
+    </div>
   )
 }
