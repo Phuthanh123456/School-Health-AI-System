@@ -1,6 +1,6 @@
 # UI Redesign Work Breakdown (M0–M9)
 
-This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M3 are complete through separately committed milestones; M4–M9 remain planned and must not be considered implemented until separately completed and reviewed.
+This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M4 are complete through separately committed milestones; M5–M9 remain planned and must not be considered implemented until separately completed and reviewed.
 
 ## M0 — Baseline audit and preparation (complete)
 
@@ -50,15 +50,17 @@ This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b2
 
 **Regression risks:** Re-labeling record counts as unique students, inventing unsupported trends/percentages/filters, eagerly loading Recharts, losing timeouts/abort behavior, or hiding errors while showing stale values. Browser test runner teardown still requires manually starting Vite in this environment.
 
-## M4 — Nurse workspace
+## M4 — Nurse workspace (complete)
 
-**Files:** `frontend/src/NurseStudents.tsx`, `NurseCheckupEntry.tsx`, `pages/CheckupSessionsPage.tsx`, `api/checkupSessions.ts`, `checkupMath.js` (read-only dependency), `RoleWorkspace.tsx`, Nurse tests.
+**Files:** `frontend/src/NurseStudents.tsx`, `NurseCheckupEntry.tsx`, `pages/CheckupSessionsPage.tsx`, and Nurse unit/browser tests. `api/checkupSessions.ts`, `checkupMath.js`, and `RoleWorkspace.tsx` remain unchanged.
 
 **Dependencies:** M1 and M2; preserve the current screen state model.
 
-**Acceptance criteria:** Make student lookup, existing session selection, eligible student selection, result entry, and save/edit feedback easy to follow on desktop and mobile. Keep methods, endpoints, payload/response validation, result statuses, BMI formula/rounding, edit-vs-create behavior, and authorization unchanged. Retain request aborts, request-ID/stale response checks, selected session/student key guards, saving lock and duplicate-submit prevention, explicit failed-result-read lock/retry, and session-change loading reset. Do not silently drop unsaved work. Extend the existing Nurse component tests for loading, errors, empty data, select/change session, result load/retry, validation, save/update, duplicate submit, cancellation, and stale results.
+**Acceptance criteria met:** Nurse profiles use responsive shared cards, accessible search/profile controls, skeleton/empty states, and clear save/delete feedback. Checkup entry presents the three existing task steps, offers a direct route to browse existing sessions, and uses the shared form controls without changing fields or validation. Session selection and participant details use shared cards, status badges, loading skeletons, empty states, and retry buttons. Existing role authorization, request methods/endpoints, payload/response validation, result statuses, BMI formula/rounding, edit-vs-create behavior, request aborts, stale request guards, selected session/student key guards, save lock/duplicate-submit protection, failed-result-read lock/retry, and session-change loading reset remain in place. Existing save target identity prevents switching students while a write is in flight; drafts are not silently cleared by presentation changes.
 
-**Regression risks:** A delayed response applying to a different student, saving after a failed read, stale BMI/status, accidental duplicate result, session switch leaving search disabled, or a visual form refactor discarding drafts.
+**Validation:** `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test` passed (3 BMI tests and 24 Vitest tests including all 14 Nurse checkup workflow cases). Added synthetic browser checks for searching/opening a Nurse profile and selecting an existing session/participant; both passed (2/2). `NurseCheckupEntry.test.tsx` now also asserts the accessible workflow-step list. Browser checks used a manually started Vite server.
+
+**Regression risks:** A delayed response applying to a different student, saving after a failed read, stale BMI/status, accidental duplicate result, session switch leaving search disabled, or a visual form refactor discarding drafts. Retain the dedicated async regression suite when changing Nurse forms. Browser runner teardown still requires manually starting Vite in this environment.
 
 ## M5 — Parent family dashboard
 

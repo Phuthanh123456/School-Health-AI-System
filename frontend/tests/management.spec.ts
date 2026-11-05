@@ -116,6 +116,39 @@ test('Malformed successful Parent response shows a recoverable error', async ({ 
   await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
 })
 
+test('Nurse can search synthetic student profiles from the profile workspace', async ({ page }) => {
+  await login(page, 'nurse')
+  await page.route('**/students', route => route.fulfill({ json: [
+    { id: 'STU101', full_name: 'Synthetic Student', class_name: '6A' },
+  ] }))
+  await page.route('**/students/STU101', route => route.fulfill({ json: {
+    id: 'STU101', full_name: 'Synthetic Student', class_name: '6A', allergies: null, medical_notes: null,
+  } }))
+  await page.goto('/nurse')
+
+  await expect(page.getByRole('heading', { name: 'Hồ sơ sức khỏe học sinh' })).toBeVisible()
+  await page.getByRole('button', { name: /Synthetic Student/ }).click()
+  await expect(page.getByRole('heading', { name: 'Hồ sơ học sinh' })).toBeVisible()
+  await expect(page.getByText('STU101', { exact: true }).first()).toBeVisible()
+})
+
+test('Nurse can select a checkup session and inspect its participants', async ({ page }) => {
+  await login(page, 'nurse')
+  await page.route('**/checkups/sessions', route => route.fulfill({ json: [
+    { id: 'SESSION-DEMO', title: 'Synthetic annual checkup', checkup_date: '2026-11-03', class_name: '6A', participant_count: 1 },
+  ] }))
+  await page.route('**/checkups/sessions/SESSION-DEMO', route => route.fulfill({ json: {
+    id: 'SESSION-DEMO', title: 'Synthetic annual checkup', checkup_date: '2026-11-03', class_name: '6A', participant_count: 1,
+    students: [{ id: 'STU101', full_name: 'Synthetic Student', class_name: '6A' }],
+  } }))
+  await page.goto('/nurse')
+  await page.getByRole('button', { name: /Checkup sessions/ }).click()
+  await page.getByRole('button', { name: 'Browse checkup sessions' }).click()
+  await page.getByRole('button', { name: /Synthetic annual checkup/ }).click()
+  await expect(page.getByRole('heading', { name: 'Synthetic annual checkup' })).toBeVisible()
+  await expect(page.getByText('Synthetic Student', { exact: true })).toBeVisible()
+})
+
 test('Admin combines filters, resets and paginates', async ({ page }) => {
   await login(page, 'admin')
   const state = Array.from({ length: 21 }, (_, index) => record(`S${index + 1}`))

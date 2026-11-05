@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { getAccessToken } from './auth'
+import { Button, Card, EmptyState, Input, PageHeader, Skeleton } from './components/ui'
 
 type Student = { id: string; full_name: string; class_name: string }
 type Profile = Student & { allergies: string | null; medical_notes: string | null }
 
 const api = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
-const inputStyle = 'mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 focus-visible:outline-2 focus-visible:outline-primary'
-const buttonStyle = 'rounded-lg bg-primary-strong px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'
+const inputStyle = 'mt-1'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const headers = new Headers(options?.headers)
@@ -75,15 +75,15 @@ function ProfileForm({ profile, onSaved, onSaving, busy }: {
     <form onSubmit={save} className="mt-5">
       <fieldset disabled={saving || busy} className="grid gap-4">
         <label className="text-sm font-semibold">Mã học sinh
-          <input className={inputStyle} name="id" defaultValue={profile?.id} readOnly={Boolean(profile)} required maxLength={50}
+          <Input className={inputStyle} name="id" defaultValue={profile?.id} readOnly={Boolean(profile)} required maxLength={50}
             pattern="[A-Za-z0-9]+" title="Viết liền, chỉ dùng chữ không dấu và số." />
           {!profile && <span className="mt-1 block text-xs font-normal text-muted">Viết liền, chỉ dùng chữ không dấu và số.</span>}
         </label>
         <label className="text-sm font-semibold">Họ tên
-          <input className={inputStyle} name="full_name" defaultValue={profile?.full_name} required maxLength={200} />
+          <Input className={inputStyle} name="full_name" defaultValue={profile?.full_name} required maxLength={200} />
         </label>
         <label className="text-sm font-semibold">Lớp
-          <input className={inputStyle} name="class_name" defaultValue={profile?.class_name} required maxLength={50} />
+          <Input className={inputStyle} name="class_name" defaultValue={profile?.class_name} required maxLength={50} />
         </label>
         <label className="text-sm font-semibold">Dị ứng
           <textarea className={inputStyle} name="allergies" defaultValue={profile?.allergies ?? ''} rows={2} maxLength={2000} />
@@ -92,9 +92,9 @@ function ProfileForm({ profile, onSaved, onSaving, busy }: {
           <textarea className={inputStyle} name="medical_notes" defaultValue={profile?.medical_notes ?? ''} rows={3} maxLength={2000} />
         </label>
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-        <button className={`${buttonStyle} justify-self-start`} type="submit">
+        <Button className="justify-self-start" type="submit" loading={saving} loadingLabel="Đang lưu…">
           {saving ? 'Đang lưu…' : 'Lưu hồ sơ'}
-        </button>
+        </Button>
       </fieldset>
     </form>
   )
@@ -170,30 +170,23 @@ export default function NurseStudents() {
 
   return (
     <div className="mx-auto max-w-6xl py-2">
-      <header className="my-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-muted">Điều dưỡng · Dữ liệu demo</p>
-          <h1 className="mt-1 font-display text-3xl font-bold">Hồ sơ sức khỏe học sinh</h1>
-        </div>
-        <button className={buttonStyle} type="button" disabled={saving || students === null} onClick={() => open(null)}>
-          Thêm học sinh
-        </button>
-      </header>
-      <div className="grid items-start gap-5 md:grid-cols-2">
-        <section className="min-w-0 rounded-2xl border border-border bg-white p-4 sm:p-5">
-          <h2 className="text-lg font-bold">Danh sách học sinh {students && `(${students.length})`}</h2>
+      <PageHeader className="my-6" eyebrow="Điều dưỡng · Dữ liệu demo" title="Hồ sơ sức khỏe học sinh"
+        actions={<Button disabled={saving || students === null} onClick={() => open(null)}>Thêm học sinh</Button>} />
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(18rem,0.9fr)_minmax(0,1.1fr)]">
+        <Card as="section" aria-labelledby="student-list-title" className="min-w-0 p-4 sm:p-5">
+          <h2 id="student-list-title" className="text-lg font-bold">Danh sách học sinh {students && `(${students.length})`}</h2>
           <label className="mt-3 block text-sm font-semibold">Tìm theo mã học sinh
-            <input type="search" className={inputStyle} value={search} maxLength={50}
+            <Input type="search" className={inputStyle} value={search} maxLength={50}
               onChange={(event) => setSearch(event.target.value)} placeholder="Nhập mã học sinh" />
           </label>
           {listError && <p role="alert" className="mt-3 text-sm text-red-700">{listError}</p>}
-          {!students && !listError && <p role="status" className="mt-3 text-sm text-muted">Đang tải danh sách…</p>}
-          {students?.length === 0 && <p className="mt-3 text-sm text-muted">Chưa có học sinh.</p>}
+          {!students && !listError && <div role="status" aria-label="Đang tải danh sách học sinh" className="mt-4 space-y-3">{[1, 2, 3].map(item => <Skeleton key={item} className="h-14" />)}</div>}
+          {students?.length === 0 && <EmptyState className="mt-4" title="Chưa có học sinh" description="Hồ sơ học sinh sẽ xuất hiện tại đây khi dữ liệu được thêm." />}
           <ul className="mt-3 max-h-[32rem] divide-y divide-border overflow-auto">
             {visibleStudents?.map((student) => (
               <li key={student.id}>
                 <button type="button" disabled={saving} aria-pressed={selection === student.id} onClick={() => open(student.id)}
-                  className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-background aria-pressed:bg-primary-soft">
+                  className="flex min-h-14 w-full items-center justify-between gap-3 rounded-control px-3 py-2 text-left hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:bg-primary-soft">
                   <span className="min-w-0 break-words text-sm font-semibold">{student.full_name}<span className="block text-xs font-normal text-muted">{student.id}</span></span>
                   <span className="shrink-0 text-sm text-muted">{student.class_name}</span>
                 </button>
@@ -201,20 +194,19 @@ export default function NurseStudents() {
             ))}
           </ul>
           {students && students.length > 0 && visibleStudents?.length === 0 &&
-            <p className="mt-3 text-sm text-muted">Không tìm thấy mã học sinh phù hợp.</p>}
-        </section>
-        <section className="rounded-2xl border border-border bg-white p-4 sm:p-5">
-          <h2 className="text-lg font-bold">{adding ? 'Thêm học sinh mới' : 'Hồ sơ học sinh'}</h2>
+            <EmptyState className="mt-4" title="Không tìm thấy học sinh" description="Thử tìm bằng mã học sinh khác." />}
+        </Card>
+        <Card as="section" aria-labelledby="student-profile-title" className="p-4 sm:p-5">
+          <h2 id="student-profile-title" className="text-lg font-bold">{adding ? 'Thêm học sinh mới' : 'Hồ sơ học sinh'}</h2>
           {notice && <p role="status" className="mt-3 text-sm font-semibold text-green-800">{notice}</p>}
           {detailError && <p role="alert" className="mt-3 text-sm text-red-700">{detailError}</p>}
           {adding || profile
             ? <ProfileForm key={adding ? 'new' : JSON.stringify(profile)} profile={profile} onSaved={saved} onSaving={setSaving} busy={saving} />
-            : !detailError && <p className="mt-3 text-sm text-muted">{selection ? 'Đang tải hồ sơ…' : 'Chọn một học sinh để xem hồ sơ.'}</p>}
-          {profile && <button type="button" disabled={saving} onClick={removeStudent}
-            className="mt-4 rounded-lg border border-red-700 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">
-            Xóa học sinh
-          </button>}
-        </section>
+            : !detailError && (selection
+              ? <div role="status" aria-label="Đang tải hồ sơ học sinh" className="mt-4 space-y-3"><Skeleton shape="text" className="w-1/3" /><Skeleton className="h-24" /></div>
+              : <EmptyState className="mt-4" title="Chọn hồ sơ học sinh" description="Chọn một học sinh trong danh sách để xem thông tin và kết quả hồ sơ." />)}
+          {profile && <Button type="button" variant="danger" disabled={saving} onClick={removeStudent} className="mt-4">Xóa học sinh</Button>}
+        </Card>
       </div>
     </div>
   )

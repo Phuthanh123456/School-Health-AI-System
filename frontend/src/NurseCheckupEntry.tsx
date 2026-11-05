@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { calculateBmi, formatBmi } from './checkupMath.js'
 import CheckupSessionsPage from './pages/CheckupSessionsPage'
 import { getAccessToken, signOut } from './auth'
+import { Button, Card, Input, Select } from './components/ui'
 
 type Session = { id: string; title: string; checkup_date: string; class_name: string | null; participant_count: number }
 type Student = { id: string; student_code: string; full_name: string; class_name: string }
@@ -340,6 +341,8 @@ export function NurseCheckupEntry({
     }
   }
 
+  const activeStep = student ? 2 : sessionId ? 1 : 0
+
   return (
     <div className="text-foreground">
       <div className="mx-auto max-w-4xl py-2">
@@ -348,19 +351,31 @@ export function NurseCheckupEntry({
         ) : (
           <button type="button" disabled={saving} onClick={onClose} className="mb-6 text-sm font-semibold text-primary-strong hover:underline disabled:opacity-50">← Trang chủ</button>
         )}
-        <header className="mb-6 rounded-3xl border border-border bg-white p-6 sm:p-8">
+        <Card as="header" className="mb-6 p-6 sm:p-8">
           <p className="text-xs font-bold uppercase tracking-widest text-primary-strong">SchoolHealth · Nurse</p>
           <h1 className="mt-2 font-display text-3xl font-bold">Nhập kết quả khám sức khỏe</h1>
           <p className="mt-2 text-sm leading-6 text-muted">Kết quả và BMI hỗ trợ ghi nhận thông tin; quyết định theo dõi do nhân viên y tế lựa chọn.</p>
-        </header>
+          <Button variant="outline" disabled={saving} onClick={() => onSelectSession(null)} className="mt-4">Browse checkup sessions</Button>
+        </Card>
 
         {!authorization ? (
           <p role="status" className="rounded-3xl border border-border bg-white p-6 text-sm text-muted">Loading your Nurse session…</p>
         ) : (
           <>
-            <section className="mb-4 rounded-3xl border border-border bg-white p-6">
+            <Card as="section" aria-label="Chọn phiên khám và học sinh" className="mb-4 p-5 sm:p-6">
+              <ol aria-label="Các bước nhập kết quả" className="mb-6 grid gap-2 sm:grid-cols-3">
+                {[
+                  { label: '1. Chọn phiên khám' },
+                  { label: '2. Chọn học sinh' },
+                  { label: '3. Nhập kết quả' },
+                ].map((step, index) => (
+                  <li key={step.label} aria-current={index === activeStep ? 'step' : undefined} className={`rounded-control border px-3 py-2 text-sm font-semibold ${index < activeStep ? 'border-primary bg-primary-soft text-primary-strong' : index === activeStep ? 'border-secondary bg-secondary-soft text-secondary-strong' : 'border-border bg-surface text-muted'}`}>
+                    <span className="mr-2" aria-hidden="true">{index < activeStep ? '✓' : '○'}</span>{step.label}
+                  </li>
+                ))}
+              </ol>
               <label className="grid gap-1 text-sm font-semibold">Phiên khám
-                <select value={sessionId} disabled={saving || (route.kind === 'result-entry' && route.sessionId !== null)} onChange={(event) => {
+                <Select value={sessionId} disabled={saving || (route.kind === 'result-entry' && route.sessionId !== null)} onChange={(event) => {
                   if (savingRef.current) return
                   rosterAbortRef.current?.abort()
                   rosterRequestRef.current += 1
@@ -371,16 +386,16 @@ export function NurseCheckupEntry({
                   clearStudentSelection()
                   setSessionId(event.target.value)
                   setStudents([])
-                }} className="rounded-xl border border-border bg-white px-3 py-2.5 font-normal disabled:opacity-60">
+                }} className="font-normal">
                   <option value="">Chọn phiên khám</option>
                   {sessions.map((session) => <option key={session.id} value={session.id}>{session.title} · {session.checkup_date}</option>)}
-                </select>
+                </Select>
               </label>
               <form onSubmit={searchStudents} className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <label className="grid flex-1 gap-1 text-sm font-semibold">Tìm theo tên hoặc Mã học sinh
-                  <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nhập tên hoặc mã" className="rounded-xl border border-border px-3 py-2.5 font-normal" />
+                  <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nhập tên hoặc mã" className="font-normal" />
                 </label>
-                <button disabled={busy || saving || !sessionId} className="self-end rounded-xl border border-primary px-5 py-2.5 font-semibold text-primary-strong disabled:opacity-50">Tìm học sinh</button>
+                <Button type="submit" variant="outline" loading={busy && route.kind === 'result-entry'} disabled={saving || !sessionId} className="self-end">Tìm học sinh</Button>
               </form>
               {busy && route.kind === 'result-entry' && <p role="status" className="mt-3 text-sm text-muted">Đang tải học sinh trong phiên…</p>}
               {students.length > 0 && <div className="mt-3 grid gap-2 sm:grid-cols-2">{students.map((item) => (
@@ -389,41 +404,41 @@ export function NurseCheckupEntry({
                 </button>
               ))}</div>}
               {students.length === 0 && sessionId && !busy && <p className="mt-3 text-sm text-muted">Tìm kiếm chỉ hiển thị học sinh tham gia phiên khám đã chọn.</p>}
-            </section>
+            </Card>
 
-            {student && <form onSubmit={saveResult} className="grid gap-4 rounded-3xl border border-border bg-white p-6 sm:p-8">
+            {student && <Card as="form" onSubmit={saveResult} className="grid gap-4 p-5 sm:p-8">
               <div className="rounded-2xl bg-background p-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted">Học sinh được chọn</p><p className="mt-1 font-display text-xl font-bold">{student.full_name}</p><p className="text-sm text-muted">Mã {student.student_code} · Lớp {student.class_name}</p></div>
               {resultLoading && <p role="status" className="text-sm text-muted">Đang tải kết quả đã lưu…</p>}
               {resultLoadState === 'error' && (
                 <div className="rounded-xl border border-red-200 bg-red-50 p-4">
                   <p className="text-sm text-red-800">Chưa tải được kết quả. Form được khóa để bảo vệ dữ liệu đã lưu.</p>
-                  <button type="button" disabled={saving} onClick={() => void selectStudent(student)} className="mt-3 min-h-11 rounded-xl border border-primary px-4 font-semibold text-primary-strong disabled:opacity-50">
+                  <Button type="button" variant="outline" disabled={saving} onClick={() => void selectStudent(student)} className="mt-3">
                     Tải lại kết quả
-                  </button>
+                  </Button>
                 </div>
               )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-1 text-sm font-semibold">Chiều cao (cm)
-                  <input required disabled={!resultEditable || saving} type="number" min="0.1" max="9999.9" step="0.1" value={height} onChange={(event) => setHeight(event.target.value)} className="rounded-xl border border-border px-3 py-2.5 font-normal disabled:opacity-60" />
+                  <Input required disabled={!resultEditable || saving} type="number" min="0.1" max="9999.9" step="0.1" value={height} onChange={(event) => setHeight(event.target.value)} className="font-normal" />
                 </label>
                 <label className="grid gap-1 text-sm font-semibold">Cân nặng (kg)
-                  <input required disabled={!resultEditable || saving} type="number" min="0.1" max="999.9" step="0.1" value={weight} onChange={(event) => setWeight(event.target.value)} className="rounded-xl border border-border px-3 py-2.5 font-normal disabled:opacity-60" />
+                  <Input required disabled={!resultEditable || saving} type="number" min="0.1" max="999.9" step="0.1" value={weight} onChange={(event) => setWeight(event.target.value)} className="font-normal" />
                 </label>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-1 text-sm font-semibold">Thị lực (tùy chọn)
-                  <input disabled={!resultEditable || saving} value={vision} onChange={(event) => setVision(event.target.value)} maxLength={2000} className="rounded-xl border border-border px-3 py-2.5 font-normal disabled:opacity-60" />
+                  <Input disabled={!resultEditable || saving} value={vision} onChange={(event) => setVision(event.target.value)} maxLength={2000} className="font-normal" />
                 </label>
                 <label className="grid gap-1 text-sm font-semibold">Trạng thái theo dõi do Nurse chọn
-                  <select disabled={!resultEditable || saving} value={status} onChange={(event) => setStatus(event.target.value as Status)} className="rounded-xl border border-border bg-white px-3 py-2.5 font-normal disabled:opacity-60"><option>Normal</option><option>Needs Follow-up</option></select>
+                  <Select disabled={!resultEditable || saving} value={status} onChange={(event) => setStatus(event.target.value as Status)} className="font-normal"><option>Normal</option><option>Needs Follow-up</option></Select>
                 </label>
               </div>
               <label className="grid gap-1 text-sm font-semibold">Ghi chú (tùy chọn)
                 <textarea disabled={!resultEditable || saving} value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={5000} rows={3} className="rounded-xl border border-border px-3 py-2.5 font-normal disabled:opacity-60" />
               </label>
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-primary-soft p-4"><span className="font-semibold">BMI tính toán</span><output aria-live="polite" className="font-display text-2xl font-bold">{formatBmi(bmi)}</output></div>
-              <button disabled={busy || saving || !resultEditable} className="min-h-12 rounded-xl bg-primary px-6 font-semibold text-white disabled:opacity-60">{saving ? 'Đang lưu…' : 'Lưu / cập nhật kết quả'}</button>
-            </form>}
+              <Button type="submit" loading={saving} loadingLabel="Đang lưu…" disabled={busy || !resultEditable} className="w-full sm:w-fit">Lưu / cập nhật kết quả</Button>
+            </Card>}
           </>
         )}
         {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}

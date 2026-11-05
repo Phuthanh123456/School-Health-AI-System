@@ -121,6 +121,7 @@ describe('Nurse checkup result selection', () => {
         onContinueToResults={() => undefined}
       />,
     )
+    expect(screen.getByRole('list', { name: 'Các bước nhập kết quả' })).toBeTruthy()
     await screen.findByRole('combobox')
     const sessionSelect = document.querySelector('select')!
     fireEvent.change(sessionSelect, { target: { value: 'SESSION-A' } })
