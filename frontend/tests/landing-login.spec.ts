@@ -3,11 +3,11 @@ import { expect, test } from '@playwright/test'
 test('public landing explains the product and offers working sign-in navigation', async ({ page }) => {
   await page.goto('/')
 
-  await expect(page.getByRole('heading', { name: /Every checkup/i })).toBeVisible()
-  await expect(page.getByRole('link', { name: /Sign in/i }).first()).toHaveAttribute('href', '/login')
-  await expect(page.getByRole('link', { name: /Explore the platform/i })).toHaveAttribute('href', '#features')
-  await expect(page.getByRole('img', { name: 'Illustrative health trends chart' })).toBeVisible()
-  await expect(page.getByText('Use synthetic data in demos.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Better Student Care/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Login', exact: true }).first()).toHaveAttribute('href', '/login')
+  await expect(page.getByRole('link', { name: 'Explore Features' })).toHaveAttribute('href', '#features')
+  await expect(page.getByRole('img', { name: 'A healthcare professional listening to a child’s breathing during a checkup' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'AI-Assisted Health Insights', exact: true })).toBeVisible()
 })
 
 test('login validates required fields and email format accessibly', async ({ page }) => {

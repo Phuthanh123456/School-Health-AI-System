@@ -1,5 +1,15 @@
 # UI Redesign Work Breakdown (M0–M9)
 
+## Authorized follow-up — Frontline public landing (complete)
+
+**Scope/files:** `frontend/src/LandingPage.tsx`, isolated `LandingPage.css`, extraction/import in `App.tsx`, licensed local photos and credits, landing/browser tests and [reference/validation documentation](docs/LANDING_FRONTLINE_REDESIGN.md). Protected screens, auth, API contracts and backend remain outside this follow-up.
+
+**Acceptance:** Rendered Frontline desktop/mobile studied before implementation; corporate header, photo-led hero, supported solution/benefit sections, alternating content, roles, final CTA and footer implemented with SchoolHealth branding. Actual anchors and `/login` work; native mobile menu supports keyboard/Escape/focus return; six widths from 320px to 1920px have no horizontal overflow; at least one visual refinement pass completed.
+
+**Validation:** Lint, typecheck, production build and npm tests passed; full browser suite passed 53/53. The five landing browser cases passed again after final tablet refinement. Before/final screenshots, asset licenses and limitations are recorded in the linked report. Source comparison confirms all code from `ProtectedRoute` through pathname dispatch stayed identical to the preceding commit. No push or merge is part of this task.
+
+**Risks:** Reference proportions are adapted to SchoolHealth content and branding; stock scenes are illustrative. Browser regressions use synthetic API fixtures and do not certify live backend or production deployment behavior. Earlier milestone records below are retained.
+
 This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M9 are complete through separately committed milestones.
 
 ## M0 — Baseline audit and preparation (complete)

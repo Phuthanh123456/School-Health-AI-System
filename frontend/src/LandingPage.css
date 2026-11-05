@@ -1,0 +1,221 @@
+/* Public marketing surface only; protected workspaces keep their shared tokens. */
+.schoolhealth-landing {
+  --landing-heading: #2b515f;
+  --landing-copy: #34434b;
+  --landing-mint: #88dfcb;
+  --landing-mint-hover: #65cdb7;
+  --landing-pale: #f4f4f4;
+  --landing-deep: #244653;
+  color: var(--landing-copy);
+  background: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+}
+.schoolhealth-landing :is(h1,h2,h3,p,figure) { margin: 0; }
+.schoolhealth-landing :is(h1,h2,h3) { color: var(--landing-heading); }
+.schoolhealth-landing :is(a,button) { -webkit-tap-highlight-color: transparent; }
+.schoolhealth-landing a { text-decoration: none; }
+.schoolhealth-landing a:focus-visible,
+.schoolhealth-landing button:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 5px; }
+.schoolhealth-landing :is(section,article,main)[tabindex="-1"]:focus { outline: none; }
+.schoolhealth-landing section[id], .schoolhealth-landing article[id] { scroll-margin-top: 24px; }
+.schoolhealth-landing .landing-container { width: calc(100% - 128px); max-width: 1280px; margin-inline: auto; }
+.schoolhealth-landing .landing-section { padding-block: 96px; }
+.schoolhealth-landing .landing-skip { position: fixed; z-index: 100; top: 8px; left: 16px; transform: translateY(-160%); background: #fff; padding: 10px 20px; color: var(--landing-heading); }
+.schoolhealth-landing .landing-skip:focus { transform: translateY(0); }
+.schoolhealth-landing .landing-utility { background: #fcf6db; color: var(--color-primary-strong); font-size: 12px; }
+.schoolhealth-landing .landing-utility .landing-container { display: flex; align-items: center; justify-content: flex-end; gap: 32px; min-height: 32px; }
+.schoolhealth-landing .landing-utility a { display: inline-flex; align-items: center; min-height: 32px; gap: 10px; }
+.schoolhealth-landing .landing-header { background: #fff; }
+.schoolhealth-landing .landing-header-inner { min-height: 88px; display: flex; align-items: center; gap: 32px; }
+.schoolhealth-landing .landing-brand { display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0; color: var(--landing-heading); font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: -1px; line-height: 1.1; }
+.schoolhealth-landing .landing-brand-mark { display: grid; width: 43px; height: 43px; border-radius: 12px 12px 12px 3px; background: var(--color-primary); color: #fff; place-items: center; }
+.schoolhealth-landing .landing-brand-mark svg { width: 31px; height: 31px; }
+.schoolhealth-landing .landing-brand-accent { color: var(--color-primary); }
+.schoolhealth-landing .landing-brand small { display: block; margin-top: 5px; font-family: Arial, Helvetica, sans-serif; font-size: 8px; font-weight: 500; letter-spacing: 1.45px; }
+.schoolhealth-landing .landing-desktop-nav { display: flex; align-items: center; justify-content: center; gap: 25px; margin-left: auto; }
+.schoolhealth-landing .landing-desktop-nav a { display: flex; align-items: center; min-height: 44px; font-size: 14px; white-space: nowrap; }
+.schoolhealth-landing .landing-desktop-nav a:hover { color: var(--color-primary); text-decoration: underline; text-underline-offset: 7px; }
+.schoolhealth-landing .landing-header-login { display: inline-flex; justify-content: center; align-items: center; min-height: 44px; padding: 7px 22px; border: 1.5px solid var(--landing-mint); border-radius: 30px; color: var(--landing-heading); gap: 14px; font-size: 14px; }
+.schoolhealth-landing .landing-header-login:hover { background: var(--landing-mint); }
+.schoolhealth-landing .landing-header-login svg { width: 18px; height: 18px; }
+.schoolhealth-landing .landing-menu-trigger { display: none; }
+.schoolhealth-landing .landing-mobile-nav { display: flex; flex-direction: column; }
+.schoolhealth-landing .landing-mobile-nav a { display: flex; justify-content: space-between; align-items: center; min-height: 52px; border-bottom: 1px solid var(--color-border); padding-block: 12px; color: var(--landing-heading); }
+.schoolhealth-landing .landing-mobile-nav svg { width: 20px; height: 20px; }
+.schoolhealth-landing .landing-menu-dialog { font-family: Arial, Helvetica, sans-serif; }
+.schoolhealth-landing .landing-menu-dialog h2 { font-size: 20px; line-height: 1.3; font-weight: 600; letter-spacing: 0; }
+.schoolhealth-landing .landing-hero { position: relative; background: var(--landing-pale); padding-block: 54px 94px; }
+.schoolhealth-landing .landing-breadcrumb { display: flex; align-items: center; gap: 12px; font-size: 10px; letter-spacing: .25px; text-transform: uppercase; color: var(--landing-heading); margin-bottom: 40px; }
+.schoolhealth-landing .landing-hero-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 64px; align-items: center; }
+.schoolhealth-landing .landing-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 1.65px; line-height: 1.6; text-transform: uppercase; color: var(--color-primary-strong); margin-bottom: 18px; }
+.schoolhealth-landing h1 { font-size: clamp(44px,4.45vw,64px); line-height: 1.1; font-weight: 400; letter-spacing: -1.9px; }
+.schoolhealth-landing .landing-hero-copy > .landing-eyebrow { margin-bottom: 16px; }
+.schoolhealth-landing .landing-intro { max-width: 590px; margin-top: 26px; font-size: 17px; line-height: 1.7; }
+.schoolhealth-landing .landing-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 28px; }
+.schoolhealth-landing .landing-cta { display: inline-flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 52px; padding: 12px 23px; border: 1.5px solid var(--landing-mint); border-radius: 32px; background: var(--landing-mint); color: #143b43; font-size: 14px; line-height: 1.4; font-weight: 600; transition: background-color .15s, border-color .15s; }
+.schoolhealth-landing .landing-cta svg { width: 23px; height: 23px; flex-shrink: 0; }
+.schoolhealth-landing .landing-cta:hover { background: var(--landing-mint-hover); border-color: var(--landing-mint-hover); }
+.schoolhealth-landing .landing-cta--outline { border-color: var(--landing-heading); background: transparent; }
+.schoolhealth-landing .landing-hero-photo { position: relative; width: 100%; max-width: 500px; margin-left: auto; }
+.schoolhealth-landing img { display: block; width: 100%; height: auto; object-fit: cover; }
+.schoolhealth-landing .landing-hero-photo img { aspect-ratio: 1.48; border-radius: 14px; object-position: 62% center; }
+.schoolhealth-landing .landing-hero-photo figcaption { border-left: 2px solid var(--color-primary); padding-left: 13px; margin-top: 18px; font-size: 13px; color: var(--landing-heading); }
+.schoolhealth-landing .landing-section-heading { max-width: 820px; margin: 0 auto 54px; text-align: center; }
+.schoolhealth-landing h2 { font-size: clamp(32px,3.2vw,46px); line-height: 1.2; letter-spacing: -.85px; font-weight: 400; }
+.schoolhealth-landing .landing-section-heading > p:last-child:not(.landing-eyebrow) { max-width: 670px; margin: 22px auto 0; }
+.schoolhealth-landing .landing-solutions-grid { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 24px; }
+.schoolhealth-landing .landing-solution { display: flex; flex-direction: column; grid-column: span 2; border-radius: 12px; background: var(--landing-pale); padding: 30px; }
+.schoolhealth-landing .landing-solution:nth-last-child(-n+2) { grid-column: span 3; }
+.schoolhealth-landing .landing-solution-title { display: flex; align-items: center; gap: 14px; padding-bottom: 24px; border-bottom: 2px dotted #6c8c94; }
+.schoolhealth-landing .landing-solution-title svg { width: 32px; height: 32px; flex-shrink: 0; color: var(--color-primary); }
+.schoolhealth-landing h3 { font-size: 22px; line-height: 1.3; font-weight: 500; }
+.schoolhealth-landing .landing-solution > p { padding-block: 24px 30px; font-size: 15px; line-height: 1.75; }
+.schoolhealth-landing .landing-text-link { display: inline-flex; align-items: center; gap: 14px; min-height: 44px; align-self: flex-start; color: var(--color-primary-strong); font-size: 14px; font-weight: 600; margin-top: auto; }
+.schoolhealth-landing .landing-text-link:hover { text-decoration: underline; text-underline-offset: 5px; }
+.schoolhealth-landing .landing-text-link svg { width: 23px; height: 23px; flex-shrink: 0; }
+.schoolhealth-landing .landing-benefits { background: #145a57; color: #fff; }
+.schoolhealth-landing .landing-benefits :is(h2,h3) { color: #fff; }
+.schoolhealth-landing .landing-benefits .landing-eyebrow { color: #b7efe2; }
+.schoolhealth-landing .landing-benefits-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); row-gap: 48px; }
+.schoolhealth-landing .landing-benefits-grid article { padding: 0 32px; border-left: 2px dotted #83b7ad; }
+.schoolhealth-landing .landing-benefits-grid article:nth-child(3n+1) { border-left: 0; padding-left: 0; }
+.schoolhealth-landing .landing-benefits-grid svg { width: 44px; height: 44px; color: #a6e6d8; margin-bottom: 22px; }
+.schoolhealth-landing .landing-benefits-grid h3 { font-size: 20px; font-weight: 600; margin-bottom: 12px; }
+.schoolhealth-landing .landing-benefits-grid p { font-size: 15px; line-height: 1.7; color: #f0fbf8; }
+.schoolhealth-landing .landing-process { background: var(--landing-pale); }
+.schoolhealth-landing .landing-process-grid { list-style: none; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 48px; margin: 0; padding: 0; }
+.schoolhealth-landing .landing-step-number { display: block; color: var(--color-primary); font-size: 38px; font-weight: 400; padding-bottom: 20px; margin-bottom: 24px; border-bottom: 2px dotted #95b0ad; line-height: 1; }
+.schoolhealth-landing .landing-process-grid h3 { font-size: 20px; margin-bottom: 15px; }
+.schoolhealth-landing .landing-process-grid p { font-size: 15px; }
+.schoolhealth-landing .landing-stories { padding-bottom: 100px; }
+.schoolhealth-landing .landing-story { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 70px; margin-top: 80px; }
+.schoolhealth-landing .landing-story + .landing-story { margin-top: 110px; }
+.schoolhealth-landing .landing-story--reverse figure { order: 2; }
+.schoolhealth-landing .landing-story figure { min-width: 0; }
+.schoolhealth-landing .landing-story img { border-radius: 14px; aspect-ratio: 1.4; object-position: center; }
+.schoolhealth-landing .landing-story h3 { font-size: clamp(30px,2.9vw,42px); line-height: 1.18; font-weight: 400; letter-spacing: -.8px; margin-bottom: 24px; }
+.schoolhealth-landing .landing-story p:not(.landing-eyebrow) { margin-top: 18px; }
+.schoolhealth-landing .landing-story :is(.landing-text-link,.landing-cta) { margin-top: 24px; }
+.schoolhealth-landing .landing-roles { background: var(--landing-pale); }
+.schoolhealth-landing .landing-roles-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0; }
+.schoolhealth-landing .landing-roles-grid article { padding-inline: 32px; border-left: 2px dotted #8ba3a6; }
+.schoolhealth-landing .landing-roles-grid article:first-child { border-left: 0; padding-left: 0; }
+.schoolhealth-landing .landing-roles-grid svg { width: 44px; height: 44px; color: var(--color-primary); margin-bottom: 24px; }
+.schoolhealth-landing .landing-roles-grid h3 { font-size: 22px; margin-bottom: 15px; }
+.schoolhealth-landing .landing-roles-grid p { font-size: 15px; }
+.schoolhealth-landing .landing-insights-inner { display: grid; grid-template-columns: 1fr 1fr; align-items: start; gap: 70px; }
+.schoolhealth-landing .landing-insights p + p { margin-top: 20px; }
+.schoolhealth-landing .landing-scope-note { font-size: 14px; border-left: 3px solid var(--landing-mint); padding-left: 20px; }
+.schoolhealth-landing .landing-insights .landing-text-link { margin-top: 18px; }
+.schoolhealth-landing .landing-final-cta { background: var(--landing-pale); text-align: center; }
+.schoolhealth-landing .landing-final-cta h2 { font-size: clamp(34px,3.7vw,52px); }
+.schoolhealth-landing .landing-final-cta p:not(.landing-eyebrow) { margin: 24px auto 30px; max-width: 550px; }
+.schoolhealth-landing .landing-footer { background: var(--landing-deep); padding: 72px 0 24px; color: #d2e6e7; }
+.schoolhealth-landing .landing-footer-grid { display: grid; grid-template-columns: 1.7fr 1fr 1fr 1fr; gap: 55px; }
+.schoolhealth-landing .landing-footer-brand { max-width: 340px; background: #1c3a45; border-radius: 0 68px 68px 0; padding: 26px 30px 26px 0; }
+.schoolhealth-landing .landing-brand--footer { color: #fff; }
+.schoolhealth-landing .landing-brand--footer .landing-brand-accent { color: var(--landing-mint); }
+.schoolhealth-landing .landing-brand--footer .landing-brand-mark { background: var(--landing-mint); color: var(--landing-deep); }
+.schoolhealth-landing .landing-footer-brand p { margin: 24px 0; font-size: 15px; }
+.schoolhealth-landing .landing-footer h2 { font-size: 12px; font-weight: 600; letter-spacing: .7px; text-transform: uppercase; color: #fff; margin-block: 10px 25px; }
+.schoolhealth-landing .landing-footer-grid > div:not(:first-child) > a { display: flex; align-items: center; min-height: 44px; color: #a5e3d6; font-size: 14px; }
+.schoolhealth-landing .landing-footer-grid > div:not(:first-child) > a:hover { color: #fff; text-decoration: underline; }
+.schoolhealth-landing .landing-footer a:focus-visible { outline-color: var(--landing-mint); }
+.schoolhealth-landing .landing-footer-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-top: 1px solid #54747d; margin-top: 64px; padding-top: 24px; font-size: 12px; }
+@media (min-width: 1600px) {
+  .schoolhealth-landing .landing-container { max-width: 1320px; }
+  .schoolhealth-landing .landing-hero { padding-bottom: 110px; }
+}
+@media (max-width: 1099px) {
+  .schoolhealth-landing .landing-container { width: calc(100% - 64px); }
+  .schoolhealth-landing .landing-desktop-nav { display: none; }
+  .schoolhealth-landing .landing-header-login { margin-left: auto; }
+  .schoolhealth-landing .landing-header-inner { gap: 20px; }
+  .schoolhealth-landing .landing-menu-trigger { display: inline-flex; border: 1px solid var(--color-border); padding: 9px; min-height: 44px; width: 44px; border-radius: 5px; color: var(--landing-heading); background: #fff; }
+  .schoolhealth-landing .landing-hero-grid { gap: 36px; grid-template-columns: 1.1fr 1fr; }
+  .schoolhealth-landing h1 { font-size: 46px; letter-spacing: -1px; }
+  .schoolhealth-landing .landing-solution { padding: 24px; }
+  .schoolhealth-landing .landing-solutions-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .schoolhealth-landing .landing-solution,
+  .schoolhealth-landing .landing-solution:nth-last-child(-n+2) { grid-column: auto; }
+  .schoolhealth-landing .landing-solution:last-child { grid-column: 1 / -1; }
+  .schoolhealth-landing .landing-solution-title { flex-direction: column; align-items: flex-start; }
+  .schoolhealth-landing .landing-story { gap: 40px; }
+  .schoolhealth-landing .landing-footer-grid { gap: 30px; }
+}
+@media (min-width: 768px) and (max-width: 899px) {
+  .schoolhealth-landing .landing-hero-grid { grid-template-columns: 1fr; }
+  .schoolhealth-landing .landing-hero-copy { max-width: 680px; }
+  .schoolhealth-landing .landing-hero-photo { max-width: 600px; margin-inline: auto; }
+}
+@media (max-width: 767px) {
+  .schoolhealth-landing .landing-container { width: calc(100% - 40px); }
+  .schoolhealth-landing .landing-section { padding-block: 64px; }
+  .schoolhealth-landing .landing-utility .landing-container { justify-content: space-between; gap: 12px; }
+  .schoolhealth-landing .landing-utility { font-size: 10px; }
+  .schoolhealth-landing .landing-header-inner { min-height: 76px; gap: 12px; }
+  .schoolhealth-landing .landing-brand { font-size: 20px; gap: 8px; }
+  .schoolhealth-landing .landing-brand-mark { width: 36px; height: 36px; border-radius: 10px 10px 10px 3px; }
+  .schoolhealth-landing .landing-brand small { font-size: 6px; letter-spacing: 1.15px; }
+  .schoolhealth-landing .landing-header-login { padding: 8px 14px; font-size: 12px; }
+  .schoolhealth-landing .landing-header-login svg { display: none; }
+  .schoolhealth-landing .landing-menu-trigger { width: 40px; flex-shrink: 0; }
+  .schoolhealth-landing .landing-hero { padding: 30px 0 52px; }
+  .schoolhealth-landing .landing-breadcrumb { gap: 8px; font-size: 8px; margin-bottom: 28px; }
+  .schoolhealth-landing .landing-hero-grid { grid-template-columns: 1fr; gap: 36px; }
+  .schoolhealth-landing h1 { font-size: clamp(36px,8.8vw,58px); line-height: 1.12; letter-spacing: -1px; }
+  .schoolhealth-landing .landing-eyebrow { font-size: 10px; letter-spacing: 1.4px; }
+  .schoolhealth-landing .landing-intro { font-size: 16px; margin-top: 22px; }
+  .schoolhealth-landing .landing-actions { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 24px; }
+  .schoolhealth-landing .landing-actions .landing-cta { width: 100%; }
+  .schoolhealth-landing .landing-cta { gap: 16px; padding: 12px 20px; min-height: 50px; }
+  .schoolhealth-landing .landing-hero-photo { max-width: none; }
+  .schoolhealth-landing .landing-hero-photo img { aspect-ratio: 1.45; }
+  .schoolhealth-landing .landing-section-heading { margin-bottom: 36px; }
+  .schoolhealth-landing h2 { font-size: 34px; }
+  .schoolhealth-landing .landing-solutions-grid { grid-template-columns: 1fr; gap: 20px; }
+  .schoolhealth-landing .landing-solution,
+  .schoolhealth-landing .landing-solution:nth-last-child(-n+2) { grid-column: auto; padding: 28px; }
+  .schoolhealth-landing .landing-solution:last-child { grid-column: auto; }
+  .schoolhealth-landing .landing-solution-title { flex-direction: row; align-items: center; gap: 18px; }
+  .schoolhealth-landing .landing-solution h3 { font-size: 21px; }
+  .schoolhealth-landing .landing-solution > p { font-size: 16px; }
+  .schoolhealth-landing .landing-benefits-grid { grid-template-columns: 1fr; gap: 32px; }
+  .schoolhealth-landing .landing-benefits-grid article,
+  .schoolhealth-landing .landing-benefits-grid article:nth-child(3n+1) { padding: 0 0 30px; border-left: 0; border-bottom: 2px dotted #83b7ad; }
+  .schoolhealth-landing .landing-benefits-grid article:last-child { border-bottom: 0; padding-bottom: 0; }
+  .schoolhealth-landing .landing-benefits-grid svg { margin-bottom: 15px; }
+  .schoolhealth-landing .landing-benefits-grid p { font-size: 16px; }
+  .schoolhealth-landing .landing-process-grid { grid-template-columns: 1fr; gap: 32px; }
+  .schoolhealth-landing .landing-step-number { font-size: 32px; margin-bottom: 16px; padding-bottom: 16px; }
+  .schoolhealth-landing .landing-process-grid p { font-size: 16px; }
+  .schoolhealth-landing .landing-story,
+  .schoolhealth-landing .landing-story + .landing-story { grid-template-columns: 1fr; gap: 30px; margin-top: 56px; }
+  .schoolhealth-landing .landing-story--reverse figure { order: 0; }
+  .schoolhealth-landing .landing-story h3 { font-size: 32px; margin-bottom: 20px; }
+  .schoolhealth-landing .landing-story img { aspect-ratio: 1.4; }
+  .schoolhealth-landing .landing-roles-grid { grid-template-columns: 1fr; gap: 30px; }
+  .schoolhealth-landing .landing-roles-grid article { border-left: 0; border-bottom: 2px dotted #8ba3a6; padding: 0 0 30px; }
+  .schoolhealth-landing .landing-roles-grid article:last-child { border-bottom: 0; padding-bottom: 0; }
+  .schoolhealth-landing .landing-roles-grid p { font-size: 16px; }
+  .schoolhealth-landing .landing-insights-inner { grid-template-columns: 1fr; gap: 28px; }
+  .schoolhealth-landing .landing-footer { padding-top: 54px; }
+  .schoolhealth-landing .landing-footer-grid { grid-template-columns: 1fr 1fr; gap: 36px 24px; }
+  .schoolhealth-landing .landing-footer-brand { grid-column: 1 / -1; max-width: 340px; padding: 24px 28px 24px 0; }
+  .schoolhealth-landing .landing-footer h2 { margin-block: 0 14px; line-height: 1.5; }
+  .schoolhealth-landing .landing-footer-grid > div:not(:first-child) > a { line-height: 1.5; padding-block: 7px; }
+  .schoolhealth-landing .landing-footer-bottom { margin-top: 40px; flex-direction: column; }
+}
+@media (max-width: 359px) {
+  .schoolhealth-landing .landing-header-inner { gap: 8px; }
+  .schoolhealth-landing .landing-brand { font-size: 18px; }
+  .schoolhealth-landing .landing-header-login { padding-inline: 12px; }
+  .schoolhealth-landing .landing-actions { align-items: stretch; flex-direction: column; }
+  .schoolhealth-landing .landing-actions .landing-cta { justify-content: space-between; }
+  .schoolhealth-landing h2 { font-size: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .schoolhealth-landing *, .schoolhealth-landing *::before, .schoolhealth-landing *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}

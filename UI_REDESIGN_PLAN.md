@@ -1,5 +1,9 @@
 # Hybrid Healthcare UI/UX Redesign Plan
 
+## Authorized follow-up: Frontline public landing
+
+The public landing now follows the rendered [Frontline School Health reference](https://www.frontlineeducation.com/school-health-management/), replacing all earlier public-landing reference directions, including PSI Solutions. This follow-up changes only the public presentation; the completed protected-workspace milestones below remain the baseline. It reuses the shared Dialog, local licensed photography and isolated landing CSS, with responsive verification through 1920px. See [reference study, refinement evidence and validation](docs/LANDING_FRONTLINE_REDESIGN.md).
+
 ## Purpose and guardrails
 
 This plan prepares a staged visual and interaction redesign of the existing SchoolHealth frontend. M0 was a baseline audit only; M1 established shared tokens and UI primitives. No route, API contract, authentication, authorization, business rule, health calculation, or schema was changed in either milestone.

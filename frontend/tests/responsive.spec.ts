@@ -90,11 +90,15 @@ test('Parent dashboard fits all target viewports with a synthetic no-children ac
   }
 })
 
-test('landing and sign-in screenshots use the synthetic demo-only visuals', async ({ page }) => {
+test('public landing photography and sign-in screenshots contain no student record data', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/')
-  await expect(page.getByText('SYNTHETIC DEMO PREVIEW')).toBeVisible()
-  await page.screenshot({ path: '../docs/ui-redesign-qa/landing-1440.png', fullPage: true })
+  await expect(page.getByRole('heading', { name: /Better Student Care/i })).toBeVisible()
+  await page.evaluate(async () => {
+    document.querySelectorAll('img').forEach(image => { image.loading = 'eager' })
+    await Promise.all([...document.images].map(image => image.decode()))
+  })
+  await page.screenshot({ path: '../docs/landing-frontline/schoolhealth-desktop.png', fullPage: true })
   await page.goto('/login')
   await expect(page.getByRole('heading', { name: 'Sign in to SchoolHealth' })).toBeVisible()
   await page.screenshot({ path: '../docs/ui-redesign-qa/login-1440.png', fullPage: true })
@@ -102,7 +106,11 @@ test('landing and sign-in screenshots use the synthetic demo-only visuals', asyn
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto('/')
   await expectNoHorizontalOverflow(page, 'landing screenshot')
-  await page.screenshot({ path: '../docs/ui-redesign-qa/landing-375.png', fullPage: true })
+  await page.evaluate(async () => {
+    document.querySelectorAll('img').forEach(image => { image.loading = 'eager' })
+    await Promise.all([...document.images].map(image => image.decode()))
+  })
+  await page.screenshot({ path: '../docs/landing-frontline/schoolhealth-mobile.png', fullPage: true })
   await page.goto('/login')
   await expectNoHorizontalOverflow(page, 'login screenshot')
   await page.screenshot({ path: '../docs/ui-redesign-qa/login-375.png', fullPage: true })
