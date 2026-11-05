@@ -1,6 +1,6 @@
 # UI Redesign Work Breakdown (M0–M9)
 
-This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M6 are complete through separately committed milestones; M7–M9 remain planned and must not be considered complete until separately validated and committed.
+This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M6 are complete through separately committed milestones; M7 is complete in its own commit; M8–M9 remain planned until separately validated and committed.
 
 ## M0 — Baseline audit and preparation (complete)
 
@@ -86,7 +86,7 @@ This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b2
 
 **Regression risks:** Duplicate Parent/Nurse assignments must continue to replace according to the existing API semantics; never retry a failed write using a stale assignment version. Mobile record details and desktop table must remain equally actionable and screen-reader accessible.
 
-## M7 — AI Insights presentation
+## M7 — AI Insights presentation (complete)
 
 **Files:** `frontend/src/AIInsightsPanel.tsx`, `AdminDashboard.tsx`, `docs/US-6.1.md`, AI UI tests.
 
@@ -95,6 +95,8 @@ This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b2
 **Acceptance criteria:** Make the aggregate-only scope and non-clinical disclaimer visible. Preserve the explicit three-field allowlist, snapshot-change cancellation, active controller duplicate guard, 25-second browser timeout, minimum data gating, stale-statistics lock, request/response validation, retry/error state, and exact relationship to visible dashboard counts. Success only appears for an actual valid response; errors leave dashboard metrics usable. Tests assert only aggregate fields are sent and cover insufficient-data, loading, success, stale, timeout, and service errors.
 
 **Regression risks:** Exposing student-level or free-text data, promising diagnosis/treatment, fabricated fallback content, mismatched aggregate snapshot, or an AI failure blocking the overview.
+
+**Implementation and validation:** Refined the aggregate summary, computed observations, generated recommendations, privacy scope, and non-clinical disclaimer using the existing UI primitives. Preserved request cancellation and the aggregate-only payload. `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test` passed (3 BMI and 24 Vitest tests); the AI insights Playwright suite passed 14/14 against synthetic responses.
 
 ## M8 — Public landing and sign-in
 

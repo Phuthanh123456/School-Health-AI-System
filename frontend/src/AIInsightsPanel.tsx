@@ -1,28 +1,51 @@
 import { useEffect, useRef, useState } from 'react'
 import { authenticatedFetch } from './auth'
+import { Badge, Button, Card, EmptyState, Skeleton } from './components/ui'
 
 export type AggregateStats = {
   total_students: number
   checkups_completed: number
   followups_pending: number
 }
+
 type Insights = {
   summary: string
   recommendations: string[]
   disclaimer: string
   aggregates: AggregateStats
 }
+
 const labels: Record<keyof AggregateStats, string> = {
-  total_students: 'Tổng học sinh', checkups_completed: 'Lượt khám đã lưu',
-  followups_pending: 'Chờ theo dõi',
+  total_students: 'Students',
+  checkups_completed: 'Saved checkup records',
+  followups_pending: 'Needs follow-up records',
 }
-const disclaimer = 'AI chỉ cung cấp thông tin tham khảo, không phải chẩn đoán hoặc chỉ định điều trị. Nhân viên y tế cần kiểm tra trước khi sử dụng.'
+
+const disclaimer = 'AI-generated content is for general information only. It is not a diagnosis or treatment recommendation. A qualified health professional should review any follow-up decisions.'
 
 function isAggregates(value: unknown): value is AggregateStats {
   if (!value || typeof value !== 'object') return false
   const stats = value as AggregateStats
   return Object.keys(labels).every(key => Number.isSafeInteger(stats[key as keyof AggregateStats]) && stats[key as keyof AggregateStats] >= 0)
     && stats.followups_pending <= stats.checkups_completed
+}
+
+function messageForStatus(status: number): string {
+  const messages: Record<number, string> = {
+    403: 'Administrator access is required to request AI insights.',
+    409: 'The dashboard statistics changed. Refresh the overview before generating insights again.',
+    422: 'The current aggregate data is invalid or does not meet the service requirements.',
+    503: 'The AI service is unavailable right now. Please try again later.',
+    504: 'The AI service took too long to respond. Please try again.',
+  }
+  return messages[status] || 'AI insights could not be generated. Please try again.'
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return <Card as="div" className="p-4">
+    <dt className="text-sm leading-5 text-muted">{label}</dt>
+    <dd className="mt-2 font-display text-2xl font-bold tabular-nums text-text">{value.toLocaleString()}</dd>
+  </Card>
 }
 
 export default function AIInsightsPanel({ stats }: { stats: AggregateStats }) {
@@ -32,8 +55,10 @@ export default function AIInsightsPanel({ stats }: { stats: AggregateStats }) {
   const [stale, setStale] = useState(false)
   const active = useRef<AbortController | null>(null)
   const snapshot = JSON.stringify(stats)
+
   useEffect(() => () => { active.current?.abort() }, [])
-  // If dashboard counts change, discard in-flight responses.
+
+  // A changed dashboard snapshot invalidates any in-flight response and old insight.
   useEffect(() => {
     active.current?.abort()
     active.current = null
@@ -51,63 +76,127 @@ export default function AIInsightsPanel({ stats }: { stats: AggregateStats }) {
     setResult(null)
     setError('')
     const timeout = window.setTimeout(() => controller.abort(), 25000)
-    // An explicit allowlist prevents unexpected fields being sent to the backend.
+    // Keep the backend payload limited to the existing three aggregate fields.
     const payload: AggregateStats = {
-      total_students: stats.total_students, checkups_completed: stats.checkups_completed,
+      total_students: stats.total_students,
+      checkups_completed: stats.checkups_completed,
       followups_pending: stats.followups_pending,
     }
+
     try {
       const response = await authenticatedFetch('/api/admin/ai-insights', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload), signal: controller.signal,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
       })
-      if (!response.ok) {
-        if (response.status === 409) setStale(true)
-        const messages: Record<number, string> = {
-          409: 'Thống kê đã thay đổi. Nhấn Tải lại thống kê trước khi tạo nhận xét.',
-          403: 'Cần thông tin truy cập quản trị hợp lệ.',
-          422: 'Số liệu chưa hợp lệ hoặc chưa đủ 20 học sinh và 20 lượt khám đã lưu. Hãy kiểm tra lại.',
-          503: 'Dịch vụ AI chưa sẵn sàng. Vui lòng liên hệ quản trị viên.',
-          504: 'AI phản hồi quá lâu. Hãy thử lại.',
-        }
-        throw new Error(messages[response.status] || 'Chưa thể tạo nhận xét AI. Hãy thử lại sau.')
+      if (!response.ok) throw new Error(messageForStatus(response.status))
+      const data: unknown = await response.json()
+      if (!data || typeof data !== 'object') throw new Error('The AI response was invalid. Please try again.')
+      const insights = data as Partial<Insights>
+      if (typeof insights.summary !== 'string' || !Array.isArray(insights.recommendations)
+        || !insights.recommendations.every(item => typeof item === 'string')
+        || typeof insights.disclaimer !== 'string' || !isAggregates(insights.aggregates)
+        || !(Object.keys(labels) as (keyof AggregateStats)[]).every(key => insights.aggregates![key] === payload[key])) {
+        throw new Error('The AI response was invalid or did not match the current dashboard statistics.')
       }
-      const data = await response.json() as Insights
-      if (!data || typeof data.summary !== 'string' || !Array.isArray(data.recommendations) || !data.recommendations.every(x => typeof x === 'string') || typeof data.disclaimer !== 'string' || !isAggregates(data.aggregates) || !(Object.keys(labels) as (keyof AggregateStats)[]).every(key => data.aggregates[key] === payload[key])) {
-        throw new Error('Kết quả AI chưa hợp lệ. Hãy thử lại.')
-      }
-      if (active.current === controller) setResult(data)
+      if (active.current === controller) setResult(insights as Insights)
     } catch (failure) {
-      if (active.current === controller) setError(controller.signal.aborted
-        ? 'Yêu cầu đã hết thời gian chờ. Hãy thử lại.'
-        : failure instanceof TypeError ? 'Không kết nối được dịch vụ AI. Hãy kiểm tra kết nối và thử lại.'
-        : failure instanceof Error ? failure.message : 'Không thể tạo nhận xét. Hãy thử lại.')
+      if (active.current === controller) {
+        if (failure instanceof Error && failure.message.includes('statistics changed')) setStale(true)
+        setError(controller.signal.aborted
+          ? 'The request timed out. Please try again.'
+          : failure instanceof TypeError
+            ? 'Could not connect to the AI service. Check the connection and try again.'
+            : failure instanceof Error ? failure.message : 'AI insights could not be generated. Please try again.')
+      }
     } finally {
       window.clearTimeout(timeout)
-      if (active.current === controller) { active.current = null; setLoading(false) }
+      if (active.current === controller) {
+        active.current = null
+        setLoading(false)
+      }
     }
   }
+
   const enoughData = stats.total_students >= 20 && stats.checkups_completed >= 20
-  return <section aria-labelledby="ai-title" aria-busy={loading} className="rounded-3xl border border-border bg-white p-6 sm:p-8">
-    <div className="flex flex-wrap items-center justify-between gap-5">
-      <div><p className="text-xs font-bold tracking-widest text-primary">AI · TỔNG QUAN CẤP TRƯỜNG</p>
-        <h2 id="ai-title" className="mt-2 font-display text-2xl font-bold">Nhận xét từ số liệu</h2></div>
-      <button onClick={generate} disabled={loading || stale || !enoughData} className="min-h-12 rounded-full bg-primary px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 hover:bg-primary-strong focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
-        {loading ? 'Đang tạo nhận xét…' : 'Generate AI Insights'}
-      </button>
-    </div>
-    <p className="mt-4 text-sm leading-6 text-muted">Chỉ gửi số đếm tổng hợp toàn trường. Không gửi tên, mã học sinh, ghi chú hoặc hồ sơ cá nhân. Số đếm dương dưới 5 được ẩn khỏi yêu cầu AI.</p>
-    {!enoughData && <p className="mt-4 text-sm">Cần ít nhất 20 học sinh và 20 lượt khám đã lưu để tạo nhận xét.</p>}
-    <div aria-live="polite" className="mt-5">
-      {loading && <p role="status">Đang phân tích thống kê hiện tại. Bạn vẫn có thể xem các chỉ số bên trên.</p>}
-      {error && <p role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">{error} Các chỉ số trên dashboard vẫn được giữ nguyên.</p>}
-      {!result && !loading && !error && <p className="rounded-xl bg-background p-5 text-sm text-muted">Chưa có nhận xét. Nhấn Generate AI Insights để tạo bản tóm tắt mới.</p>}
-      {result && <article className="rounded-2xl bg-background p-5">
-        <h3 className="font-bold">Tóm tắt do AI hỗ trợ</h3><p className="mt-3 leading-7">{result.summary}</p>
-        <h3 className="mt-5 font-bold">Gợi ý cấp trường</h3>
-        <ul className="mt-2 list-disc space-y-2 pl-5 text-sm leading-6">{result.recommendations.map(item => <li key={item}>{item}</li>)}</ul>
-      </article>}
-    </div>
-    <p className="mt-5 border-t border-border pt-4 text-xs leading-6 text-muted">{result?.disclaimer || disclaimer}</p>
+  const normalRecords = stats.checkups_completed - stats.followups_pending
+  const summaryMetrics = [
+    { key: 'total_students' as const, value: stats.total_students },
+    { key: 'checkups_completed' as const, value: stats.checkups_completed },
+    { key: 'followups_pending' as const, value: stats.followups_pending },
+  ]
+
+  return <section aria-labelledby="ai-title" aria-busy={loading} className="space-y-5">
+    <Card as="div" className="overflow-hidden">
+      <div className="border-b border-border bg-gradient-to-r from-primary-soft via-surface to-secondary-soft px-5 py-5 sm:px-7 sm:py-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-2xl">
+            <Badge variant="info">Admin · School-level aggregates</Badge>
+            <h2 id="ai-title" className="mt-3 font-display text-2xl font-bold text-text sm:text-3xl">AI health insights</h2>
+            <p className="mt-2 text-sm leading-6 text-muted">A concise overview based on the current School Overview totals. No student names, IDs, individual records, or medical notes are sent.</p>
+          </div>
+          <Button onClick={generate} loading={loading} loadingLabel="Generating insights…" disabled={stale || !enoughData} className="shrink-0">
+            Generate AI Insights
+          </Button>
+        </div>
+        {!enoughData && <p className="mt-4 rounded-control border border-info-soft bg-surface/80 p-3 text-sm leading-6 text-muted">
+          At least 20 students and 20 saved checkup records are required before the AI request can be made.
+        </p>}
+      </div>
+
+      <div className="grid gap-6 p-5 sm:p-7">
+        <section aria-labelledby="aggregate-title">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div><h3 id="aggregate-title" className="font-display text-lg font-bold">Aggregate data summary</h3><p className="mt-1 text-sm text-muted">Current authorized dashboard snapshot</p></div>
+            <span className="text-xs text-subtle">Counts are records unless labeled students</span>
+          </div>
+          <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+            {summaryMetrics.map(metric => <Metric key={metric.key} label={labels[metric.key]} value={metric.value} />)}
+          </dl>
+        </section>
+
+        <section aria-labelledby="observations-title" className="border-t border-border pt-5">
+          <div><h3 id="observations-title" className="font-display text-lg font-bold">Key observations</h3><p className="mt-1 text-sm text-muted">Calculated from stored, Nurse-selected status totals.</p></div>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            <li className="rounded-card border border-border bg-background p-4">
+              <p className="text-sm font-semibold">Normal status</p><p className="mt-1 text-sm text-muted">{normalRecords.toLocaleString()} saved checkup {normalRecords === 1 ? 'record' : 'records'}</p>
+            </li>
+            <li className="rounded-card border border-border bg-background p-4">
+              <p className="text-sm font-semibold">Needs follow-up</p><p className="mt-1 text-sm text-muted">{stats.followups_pending.toLocaleString()} saved checkup {stats.followups_pending === 1 ? 'record' : 'records'}</p>
+            </li>
+          </ul>
+        </section>
+
+        <section aria-labelledby="generated-insights-title" aria-live="polite" className="border-t border-border pt-5">
+          <div><h3 id="generated-insights-title" className="font-display text-lg font-bold">AI-generated insights</h3><p className="mt-1 text-sm text-muted">Insights are generated on request and must be reviewed by school health staff.</p></div>
+          {loading && <div role="status" className="mt-4 space-y-3 rounded-card border border-border bg-background p-4">
+            <p className="text-sm font-semibold">Generating a summary from the current aggregate snapshot…</p><Skeleton shape="text" /><Skeleton shape="text" className="w-4/5" />
+          </div>}
+          {error && <div role="alert" className="mt-4 rounded-card border border-warning bg-warning-soft p-4 text-sm text-warning">
+            <p>{error}</p>
+            {!stale && enoughData && <Button variant="outline" size="sm" className="mt-3" onClick={generate}>Try again</Button>}
+          </div>}
+          {stale && <p className="mt-3 text-sm text-muted">Refresh School Overview to use the latest aggregate totals before generating another summary.</p>}
+          {!result && !loading && !error && <EmptyState className="mt-4" title="No AI summary yet" description="Generate a new summary to review school-level patterns and recommendations." />}
+          {result && <div className="mt-4 space-y-4">
+            <Card as="article" aria-labelledby="ai-summary-title" className="border-primary/30 bg-primary-soft/40 p-5">
+              <h4 id="ai-summary-title" className="font-bold">Summary</h4><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7 text-text">{result.summary}</p>
+            </Card>
+            <section aria-labelledby="recommendations-title">
+              <h4 id="recommendations-title" className="font-bold">School-level recommendations</h4>
+              {result.recommendations.length ? <ol className="mt-3 grid gap-3 md:grid-cols-2">
+                {result.recommendations.map((item, index) => <li key={`${index}-${item}`} className="flex gap-3 rounded-card border border-border bg-surface p-4">
+                  <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary-soft text-sm font-bold text-secondary-strong">{index + 1}</span>
+                  <p className="min-w-0 whitespace-pre-wrap break-words text-sm leading-6">{item}</p>
+                </li>)}
+              </ol> : <p className="mt-3 rounded-control bg-background p-4 text-sm text-muted">No recommendations were returned for this snapshot.</p>}
+            </section>
+          </div>}
+        </section>
+
+        <p className="border-t border-border pt-4 text-xs leading-6 text-muted">{result?.disclaimer || disclaimer}</p>
+      </div>
+    </Card>
   </section>
 }
