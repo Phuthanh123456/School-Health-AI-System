@@ -59,15 +59,26 @@ test('Admin can navigate from management to overview and generate insights for r
 
 test('Parent sees their profile and multiple linked children with history', async ({ page }) => {
   await login(page, 'parent')
-  const children = [record(), record('S3')].map(row => ({ ...row, checkups: row.latest_checkup ? [row.latest_checkup] : [] }))
+  const firstChild = record()
+  const olderCheckup = { ...firstChild.latest_checkup!, session_id: 'SESSION0', title: 'Earlier checkup', checkup_date: '2026-10-03', height_cm: 148, weight_kg: 43, bmi: 19.63 }
+  const secondChild = record('S3')
+  const children = [
+    { ...firstChild, checkups: [olderCheckup, firstChild.latest_checkup!] },
+    { ...secondChild, latest_checkup: null, checkups: [] },
+  ]
   await page.route('**/api/parent/dashboard', route => route.fulfill({ json: { parent: { ...parent1, relationship: null }, children } satisfies ParentOverview }))
   await page.goto('/parent')
   await expect(page.getByRole('heading', { name: "Your family's health" })).toBeVisible()
-  await expect(page.getByText('Synthetic S1', { exact: true })).toBeVisible()
-  await expect(page.getByText('Synthetic S3', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Synthetic S1' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Synthetic S3' })).toBeVisible()
   await expect(page.getByText(parent1.email, { exact: true })).toBeVisible()
-  await page.getByText('Checkup history (1)', { exact: true }).first().click()
+  await expect(page.getByRole('img', { name: /Recorded height by checkup date/ })).toBeVisible()
+  await expect(page.getByRole('img', { name: /Recorded weight by checkup date/ })).toBeVisible()
+  await page.getByText('Checkup history (2)', { exact: true }).click()
   await expect(page.getByText('Synthetic checkup note').first()).toBeVisible()
+  await page.getByRole('button', { name: 'Synthetic S3' }).click()
+  await expect(page.getByRole('heading', { name: 'Synthetic S3' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'No saved checkup result' })).toBeVisible()
   const stored = await page.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage } }))
   expect(JSON.stringify(stored)).not.toContain('Synthetic health note')
   expect(JSON.stringify(stored)).not.toContain('Synthetic allergy')
@@ -79,6 +90,21 @@ test('Parent without children retains their profile and clear empty state', asyn
   await page.goto('/parent')
   await expect(page.getByRole('heading', { name: 'No children linked yet' })).toBeVisible()
   await expect(page.getByText(parent1.id, { exact: true })).toBeVisible()
+})
+
+test('Parent health summary remains usable on a narrow phone viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page, 'parent')
+  const child = record('MOBILE1')
+  await page.route('**/api/parent/dashboard', route => route.fulfill({ json: {
+    parent: { ...parent1, relationship: null },
+    children: [{ ...child, checkups: child.latest_checkup ? [child.latest_checkup] : [] }],
+  } satisfies ParentOverview }))
+  await page.goto('/parent')
+
+  await expect(page.getByRole('heading', { name: 'Your family\'s health' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Latest saved checkup' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
 test('Parent error hides technical details and supports retry', async ({ page }) => {
@@ -116,6 +142,39 @@ test('Malformed successful Parent response shows a recoverable error', async ({ 
   await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
 })
 
+test('Nurse can search synthetic student profiles from the profile workspace', async ({ page }) => {
+  await login(page, 'nurse')
+  await page.route('**/students', route => route.fulfill({ json: [
+    { id: 'STU101', full_name: 'Synthetic Student', class_name: '6A' },
+  ] }))
+  await page.route('**/students/STU101', route => route.fulfill({ json: {
+    id: 'STU101', full_name: 'Synthetic Student', class_name: '6A', allergies: null, medical_notes: null,
+  } }))
+  await page.goto('/nurse')
+
+  await expect(page.getByRole('heading', { name: 'Hồ sơ sức khỏe học sinh' })).toBeVisible()
+  await page.getByRole('button', { name: /Synthetic Student/ }).click()
+  await expect(page.getByRole('heading', { name: 'Hồ sơ học sinh' })).toBeVisible()
+  await expect(page.getByText('STU101', { exact: true }).first()).toBeVisible()
+})
+
+test('Nurse can select a checkup session and inspect its participants', async ({ page }) => {
+  await login(page, 'nurse')
+  await page.route('**/checkups/sessions', route => route.fulfill({ json: [
+    { id: 'SESSION-DEMO', title: 'Synthetic annual checkup', checkup_date: '2026-11-03', class_name: '6A', participant_count: 1 },
+  ] }))
+  await page.route('**/checkups/sessions/SESSION-DEMO', route => route.fulfill({ json: {
+    id: 'SESSION-DEMO', title: 'Synthetic annual checkup', checkup_date: '2026-11-03', class_name: '6A', participant_count: 1,
+    students: [{ id: 'STU101', full_name: 'Synthetic Student', class_name: '6A' }],
+  } }))
+  await page.goto('/nurse')
+  await page.getByRole('button', { name: /Checkup sessions/ }).click()
+  await page.getByRole('button', { name: 'Browse checkup sessions' }).click()
+  await page.getByRole('button', { name: /Synthetic annual checkup/ }).click()
+  await expect(page.getByRole('heading', { name: 'Synthetic annual checkup' })).toBeVisible()
+  await expect(page.getByText('Synthetic Student', { exact: true })).toBeVisible()
+})
+
 test('Admin combines filters, resets and paginates', async ({ page }) => {
   await login(page, 'admin')
   const state = Array.from({ length: 21 }, (_, index) => record(`S${index + 1}`))
@@ -131,8 +190,8 @@ test('Admin combines filters, resets and paginates', async ({ page }) => {
   await page.getByLabel('Nurse', { exact: true }).selectOption(nurse2.id)
   await page.getByRole('button', { name: 'Search / Apply' }).click()
   await expect(page.getByText('1 records · Page 1 of 1')).toBeVisible()
-  await expect(page.getByText('Synthetic S1', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Reset', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Scrollable student health records table' }).getByText('Synthetic S1', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Reset filters', exact: true }).click()
   await expect(page.getByText('21 records · Page 1 of 3')).toBeVisible()
   await expect(page.getByLabel('Class', { exact: true })).toHaveValue('')
 })
@@ -163,14 +222,14 @@ test('Admin parent/nurse updates refresh the row and removals require confirmati
   expect(mutations).toBe(1)
   await page.getByRole('button', { name: 'Remove Parent from S1', exact: true }).click()
   await page.getByRole('button', { name: 'Confirm removal', exact: true }).click()
-  await expect(page.getByText('No Parent linked')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Scrollable student health records table' }).getByText('No Parent linked')).toBeVisible()
   await page.getByRole('button', { name: 'Assign Nurse for S1', exact: true }).click()
   await page.getByRole('dialog').getByLabel('Nurse account').selectOption(nurse2.id)
   await page.getByRole('button', { name: 'Save assignment', exact: true }).click()
   await expect(page.getByText(nurse2.email, { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Remove Nurse from S1', exact: true }).click()
   await page.getByRole('button', { name: 'Confirm removal', exact: true }).click()
-  await expect(page.getByText('No Nurse assigned')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Scrollable student health records table' }).getByText('No Nurse assigned')).toBeVisible()
   expect(mutations).toBe(4)
 })
 
@@ -186,5 +245,5 @@ test('Admin sees a stale assignment error and must reload before retry', async (
   await expect(page.getByRole('button', { name: 'Save assignment' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Reload table', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.getByText('Synthetic S1', { exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Scrollable student health records table' }).getByText('Synthetic S1', { exact: true })).toBeVisible()
 })

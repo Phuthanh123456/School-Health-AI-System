@@ -6,6 +6,7 @@ import {
   type CheckupSessionDetail,
   type CheckupSessionSummary,
 } from '../api/checkupSessions'
+import { Badge, Button, Card, EmptyState, Skeleton } from '../components/ui'
 
 type CheckupSessionsPageProps = {
   authorization: string
@@ -49,15 +50,7 @@ function ArrowIcon() {
 
 function EmptySessions() {
   return (
-    <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-10 text-center">
-      <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary-soft text-primary-strong">
-        <CalendarIcon />
-      </span>
-      <h3 className="mt-4 text-base font-bold">Chưa có đợt khám</h3>
-      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">
-        Các đợt khám sẽ xuất hiện ở đây sau khi dữ liệu demo được nạp.
-      </p>
-    </div>
+    <EmptyState icon={<CalendarIcon />} title="Chưa có đợt khám" description="Các đợt khám sẽ xuất hiện ở đây sau khi dữ liệu demo được nạp." />
   )
 }
 
@@ -125,26 +118,11 @@ function CheckupSessionsPage({
   }, [authorization, selectedSessionId, sessionReload])
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <div className="text-foreground">
       <div className="mx-auto min-h-screen max-w-7xl px-4 sm:px-8">
-        <header className="flex min-h-16 items-center justify-between gap-4 border-b border-border py-3">
-          <a href="#home" onClick={onBackHome} className="flex min-h-11 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-label="Về trang chủ SchoolHealth">
-            <span className="grid size-9 place-items-center rounded-xl bg-primary text-white">
-              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="size-5"><path d="M12 4.25v15.5M4.25 12h15.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
-            </span>
-            <span className="font-display text-base font-extrabold tracking-[-0.04em]">school<span className="text-primary-strong">health</span></span>
-          </a>
-          <span className="hidden rounded-full border border-border bg-white px-3 py-2 text-xs font-semibold text-muted sm:inline-flex">
-            KHU VỰC NHÂN VIÊN Y TẾ
-          </span>
-          <button type="button" onClick={onBackHome} className="inline-flex min-h-11 items-center rounded-full border border-border bg-white px-4 text-sm font-semibold transition-colors duration-150 hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-            Về trang chủ
-          </button>
-        </header>
-
         <section className="py-8 sm:py-10" aria-labelledby="page-title">
           <nav aria-label="Điều hướng đường dẫn" className="mb-5 text-sm text-muted">
-            <a href="#home" onClick={onBackHome} className="rounded underline-offset-4 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Trang chủ</a>
+            <button type="button" onClick={onBackHome} className="rounded underline-offset-4 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Hồ sơ học sinh</button>
             <span aria-hidden="true" className="mx-2">/</span>
             <span aria-current="page" className="font-semibold text-foreground">Đợt khám</span>
           </nav>
@@ -158,27 +136,21 @@ function CheckupSessionsPage({
               </p>
             </div>
             {sessionsState === 'ready' && sessions.length > 0 && (
-              <span className="inline-flex w-fit items-center rounded-full border border-border bg-white px-3 py-2 text-sm font-semibold text-muted" aria-live="polite">
-                {sessions.length} đợt khám
-              </span>
+              <Badge variant="info" className="px-3 py-2" aria-live="polite">{sessions.length} đợt khám</Badge>
             )}
           </div>
 
           <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(17rem,0.82fr)_minmax(0,1.18fr)]">
-            <section aria-labelledby="sessions-heading" className="min-w-0">
+            <Card as="section" aria-labelledby="sessions-heading" className="min-w-0 p-4 sm:p-5">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 id="sessions-heading" className="text-lg font-bold">Phiên khám có sẵn</h2>
                 {sessionsState === 'error' && (
-                  <button type="button" onClick={() => setSessionsReload((value) => value + 1)} className="min-h-11 rounded-lg px-3 text-sm font-semibold text-primary-strong underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                    Thử lại
-                  </button>
+                  <Button variant="ghost" size="sm" onClick={() => setSessionsReload((value) => value + 1)}>Thử lại</Button>
                 )}
               </div>
 
               {sessionsState === 'loading' && (
-                <div role="status" aria-live="polite" className="rounded-2xl border border-border bg-white px-5 py-6 text-sm text-muted">
-                  Đang tải danh sách đợt khám…
-                </div>
+                <div role="status" aria-label="Đang tải danh sách đợt khám" aria-live="polite" className="space-y-3">{[1, 2].map(item => <Skeleton key={item} className="h-24" />)}</div>
               )}
 
               {sessionsState === 'error' && (
@@ -229,9 +201,9 @@ function CheckupSessionsPage({
                   })}
                 </ul>
               )}
-            </section>
+            </Card>
 
-            <section aria-labelledby="session-detail-heading" className="min-w-0 rounded-2xl border border-border bg-white">
+            <Card as="section" aria-labelledby="session-detail-heading" className="min-w-0 p-0">
               <div className="border-b border-border px-5 py-4 sm:px-6">
                 <h2 id="session-detail-heading" className="text-lg font-bold">Chi tiết phiên khám</h2>
                 <p className="mt-1 text-sm text-muted">Danh sách học sinh thuộc phiên đã chọn.</p>
@@ -255,9 +227,7 @@ function CheckupSessionsPage({
                     <p className="font-semibold text-red-800">Không mở được phiên khám</p>
                     <p className="mt-1 text-sm leading-6 text-muted">{sessionError}</p>
                   </div>
-                  <button type="button" onClick={() => setSessionReload((value) => value + 1)} className="mt-4 min-h-11 rounded-lg px-3 text-sm font-semibold text-primary-strong underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                    Tải lại phiên khám
-                  </button>
+                  <Button variant="outline" onClick={() => setSessionReload((value) => value + 1)} className="mt-4">Tải lại phiên khám</Button>
                 </div>
               )}
 
@@ -318,11 +288,11 @@ function CheckupSessionsPage({
                   </div>
                 </div>
               )}
-            </section>
+            </Card>
           </div>
         </section>
       </div>
-    </main>
+    </div>
   )
 }
 

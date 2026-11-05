@@ -3,17 +3,39 @@
 @theme {
   --font-sans: 'Raleway', sans-serif;
   --font-display: 'Lora', serif;
-  --color-primary: #0284c7;
-  --color-primary-strong: #0369a1;
-  --color-on-primary: #000000;
-  --color-primary-soft: #e8f2f8;
-  --color-background: #f0f9ff;
-  --color-sky-soft: #bae6fd;
-  --color-sky-mid: #7dd3fc;
-  --color-foreground: #0c4a6e;
-  --color-muted: #475569;
-  --color-subtle: #526578;
-  --color-border: #bae6fd;
+  /* Semantic brand tokens. Existing utility names below stay available while
+     their values move to the shared Hybrid Healthcare palette. */
+  --color-primary: #0f766e;
+  --color-primary-strong: #115e59;
+  --color-primary-soft: #ccfbf1;
+  --color-on-primary: #ffffff;
+  --color-secondary: #2563eb;
+  --color-secondary-strong: #1d4ed8;
+  --color-secondary-soft: #dbeafe;
+  --color-background: #f7fafc;
+  --color-surface: #ffffff;
+  --color-text: #172b4d;
+  --color-foreground: var(--color-text);
+  --color-muted: #334155;
+  --color-subtle: #475569;
+  --color-border: #cbd5e1;
+  --color-success: #15803d;
+  --color-success-soft: #dcfce7;
+  --color-warning: #b45309;
+  --color-warning-soft: #fef3c7;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fee2e2;
+  --color-info: var(--color-secondary-strong);
+  --color-info-soft: var(--color-secondary-soft);
+
+  /* Backward-compatible aliases used by existing screens. */
+  --color-sky-soft: var(--color-secondary-soft);
+  --color-sky-mid: #93c5fd;
+
+  --radius-control: 0.75rem;
+  --radius-card: 1rem;
+  --radius-dialog: 1.25rem;
+  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.06);
 }
 
 :root {
@@ -35,6 +57,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  color: var(--color-text);
+  background: var(--color-background);
 }
 
 button,

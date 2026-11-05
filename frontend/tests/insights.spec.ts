@@ -35,7 +35,7 @@ test('Admin dashboard uses authenticated API origin and aggregate-only payload',
   await expect(page.getByRole('spinbutton')).toHaveCount(0)
   await expect(page.getByRole('textbox')).toHaveCount(0)
   await page.getByRole('button', { name: 'Generate AI Insights' }).click()
-  await expect(page.getByRole('button', { name: 'Đang tạo nhận xét…' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Generating insights…' })).toBeDisabled()
   await expect(page.getByText(result.summary)).toBeVisible()
   expect(calls).toBe(1)
 })
@@ -56,7 +56,7 @@ test('stale database counts require refresh and clear prior result', async ({ pa
   await page.route('**/api/admin/ai-insights', route => route.fulfill({ status: 409 }))
   await page.goto('/admin/overview')
   await page.getByRole('button', { name: 'Generate AI Insights' }).click()
-  await expect(page.getByRole('alert')).toContainText('Thống kê đã thay đổi')
+  await expect(page.getByRole('alert')).toContainText('statistics changed')
   await expect(page.getByRole('button', { name: 'Generate AI Insights' })).toBeDisabled()
   await page.route('**/api/admin/dashboard', route => route.fulfill({ json: { ...snapshot, total_students: 500 } }))
   await page.getByRole('button', { name: 'Refresh data' }).click()
@@ -69,12 +69,12 @@ test('network failure and timeout preserve counts', async ({ page }) => {
   await page.route('**/api/admin/ai-insights', route => route.abort())
   await page.goto('/admin/overview')
   await page.getByRole('button', { name: 'Generate AI Insights' }).click()
-  await expect(page.getByRole('alert')).toContainText('Không kết nối')
+  await expect(page.getByRole('alert')).toContainText('Could not connect')
   await page.route('**/api/admin/ai-insights', async () => {})
   await page.clock.install()
   await page.getByRole('button', { name: 'Generate AI Insights' }).click()
   await page.clock.fastForward(26000)
-  await expect(page.getByRole('alert')).toContainText('hết thời gian')
+  await expect(page.getByRole('alert')).toContainText('timed out')
   await expect(page.getByLabel('420 completed checkups')).toHaveText('420')
 })
 
@@ -91,8 +91,8 @@ for (const data of [null, { ...result, aggregates: { ...stats, total_students: 1
     await page.route('**/api/admin/ai-insights', route => route.fulfill({ body: JSON.stringify(data), contentType: 'application/json' }))
     await page.goto('/admin/overview')
     await page.getByRole('button', { name: 'Generate AI Insights' }).click()
-    await expect(page.getByRole('alert')).toContainText('chưa hợp lệ')
-    await expect(page.getByRole('heading', { name: 'Tóm tắt do AI hỗ trợ' })).toHaveCount(0)
+    await expect(page.getByRole('alert')).toContainText('AI response was invalid')
+    await expect(page.getByRole('heading', { name: 'Summary', exact: true })).toHaveCount(0)
   })
 }
 
@@ -111,7 +111,7 @@ test('empty school blocks generation and keeps disclaimer', async ({ page }) => 
   await page.goto('/admin/overview')
   await expect(page.getByText('No completed checkups yet')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Generate AI Insights' })).toBeDisabled()
-  await expect(page.getByText(/AI chỉ cung cấp thông tin tham khảo/)).toBeVisible()
+  await expect(page.getByText(/AI-generated content is for general information only/)).toBeVisible()
 })
 
 test('refresh cancels an in-flight response so old results cannot reappear', async ({ page }) => {
