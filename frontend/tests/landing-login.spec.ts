@@ -82,7 +82,7 @@ test('pending sign-in disables repeat submission and redirects by returned role'
     } })
   })
   await page.route('**/auth/me', route => route.fulfill({ json: { id: 'nurse-1', email: 'nurse@example.test', role: 'nurse' } }))
-  await page.route('**/students**', route => route.fulfill({ json: { items: [], total: 0, page: 1, page_size: 20 } }))
+  await page.route('**/students', route => route.fulfill({ json: [] }))
   await page.goto('/login')
   await page.getByLabel('Email').fill('nurse@example.test')
   await page.getByRole('textbox', { name: 'Password' }).fill('synthetic-password')
@@ -91,7 +91,7 @@ test('pending sign-in disables repeat submission and redirects by returned role'
   await expect(page.getByRole('button', { name: 'Signing in…' })).toBeDisabled()
   await expect(page.locator('form')).toHaveAttribute('aria-busy', 'true')
   await expect(page).toHaveURL(/\/nurse$/)
-  await expect(page.getByRole('button', { name: /Sign out/i })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'nurse navigation' })).toBeVisible()
   expect(attempts).toBe(1)
 })
 

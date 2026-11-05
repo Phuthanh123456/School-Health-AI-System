@@ -1,6 +1,6 @@
 # UI Redesign Work Breakdown (M0–M9)
 
-This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M8 are complete through separately committed milestones; M9 remains planned until final regression and handoff checks are completed and committed.
+This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b226cc7deee434742915f86c` on `test/US-6.1-pr5`. M0–M9 are complete through separately committed milestones.
 
 ## M0 — Baseline audit and preparation (complete)
 
@@ -110,7 +110,7 @@ This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b2
 
 **Implementation and validation:** Reworked the responsive sign-in page around the shared Button, Card, and Input primitives, added role-aware product context with clearly synthetic illustrative content, and retained all public paths and auth callbacks. Added five Playwright cases covering landing links, field validation, visibility toggle, sign-in failure/retry, pending duplicate-submit protection, and role redirect. `npm run lint`, `npm run typecheck`, `npm run build`, and `npm test` passed (3 BMI and 24 Vitest tests); Playwright landing/login passed 5/5.
 
-## M9 — Final QA, accessibility and polish
+## M9 — Final QA, accessibility and polish (complete)
 
 **Files:** Frontend screens/components/tests from M1–M8; `TASK_DECOMPOSITION.md`, `UI_REDESIGN_PLAN.md`, and new final QA report under `docs/`.
 
@@ -119,3 +119,5 @@ This work breakdown is based on the frontend at audit commit `45523ec32718a0f1b2
 **Acceptance criteria:** Run all four required frontend commands plus available Playwright/E2E suites. Review responsive layouts at 320, 375, 768, 1024, and 1440 CSS pixels; keyboard/focus/forms/dialogs/chart alternatives; design-token use; error/loading/empty/success states; overflow; role/privacy boundaries; auth/session, assignment `If-Match`, Nurse save/stale-response, Parent child switching, and AI allowlist. Capture/review screenshots with synthetic data only. Record actual checks, residual limitations, and any fixes in the QA report. Do not claim WCAG conformance without an audit.
 
 **Regression risks:** Treating automated checks as a complete accessibility audit, screenshotting real health data, allowing viewport-specific clipping, weakening tests, or changing backend/API/auth/business rules during polish.
+
+**Implementation and validation:** Added a five-page viewport matrix across 320/375/768/1024/1440px, verified keyboard focus, and saved reviewed synthetic-only desktop/mobile screenshots. Full Playwright regression passed 48/48; responsive screenshot tests passed 5/5 after chart rendering was explicitly awaited. Lint, typecheck, build, and npm tests passed. Contrast calculations and residual limitations are recorded in [the final QA report](docs/UI_REDESIGN_FINAL_QA.md); this is not a formal WCAG audit.

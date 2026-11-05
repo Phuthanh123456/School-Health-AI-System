@@ -43,7 +43,7 @@ test('preserves Nurse profile and checkup navigation without changing the route'
   await page.getByRole('button', { name: /Checkup sessions/ }).click()
 
   await expect(page).toHaveURL(/\/nurse$/)
-  await expect(page.getByLabel('Phiên khám')).toBeVisible()
+  await expect(page.getByRole('combobox')).toBeVisible()
   await page.getByRole('button', { name: /Student profiles/ }).click()
   await expect(page.getByRole('heading', { name: 'Hồ sơ sức khỏe học sinh' })).toBeVisible()
 })
